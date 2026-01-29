@@ -5,9 +5,10 @@ import '../../utils/leafletInit';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { OSMMapRenderer } from '../../services/map_facade/adapters/OSMMapRenderer';
 import CircularProgressBar from '../ui/CircularProgressBar';
-import * as Leaflet from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import 'leaflet.markercluster';
+
+// Leaflet и его стили инициализируются в `../../utils/leafletInit`.
+// Используем `mapFacade` и глобальный `window.L` вместо прямых импортов.
+// (импорты 'leaflet', 'leaflet/dist/leaflet.css' и 'leaflet.markercluster' удалены)
 
 // Объявляем L как глобальную переменную (устанавливается в leafletInit.ts)
 declare const L: any;
@@ -37,7 +38,7 @@ import { useMapDisplayMode } from '../../hooks/useMapDisplayMode';
 import { FEATURES } from '../../config/features';
 import { getDistanceFromLatLonInKm } from '../../utils/russiaBounds';
 import { getMarkerIconPath, getCategoryColor, getFontAwesomeIconName } from '../../constants/markerCategories';
-import { mapFacade } from '../../services/map_facade/index';
+import { mapFacade, INTERNAL } from '../../services/map_facade/index';
 import type { MapConfig } from '../../services/map_facade/index';
 import { useMapStateStore } from '../../stores/mapStateStore';
 import { useEventsStore } from '../../stores/eventsStore';
@@ -48,7 +49,8 @@ import {
     getTileLayer,
     getAdditionalLayers,
     createLayerIndicator,
-    markerCategoryStyles
+    markerCategoryStyles,
+    latLngToContainerPoint
 } from './mapUtils';
 
 const MapMessage = styled.div`
@@ -143,12 +145,13 @@ const Map: React.FC<MapProps> = ({
     }, [markers]);
 
     // --- REFS ---
-    const mapRef = useRef<L.Map | null>(null);
+    // Use `any` for internal Leaflet instances to avoid direct Leaflet types in components
+    const mapRef = useRef<any | null>(null);
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const activePopupRoots = useRef<Record<string, Root>>({});
-    const tempMarkerRef = useRef<L.Marker | null>(null);
+    const tempMarkerRef = useRef<any | null>(null);
     const markerClusterGroupRef = useRef<any | null>(null);
-    const tileLayerRef = useRef<L.TileLayer | null>(null);
+    const tileLayerRef = useRef<any | null>(null);
     const isAddingMarkerModeRef = useRef(false);
     const initRetryRef = useRef<number>(0);
 
@@ -184,7 +187,7 @@ const Map: React.FC<MapProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [isMapReady, setIsMapReady] = useState(false);
     const [coordsForNewMarker, setCoordsForNewMarker] = useState<[number, number] | null>(null);
-    const [tempMarker, setTempMarker] = useState<L.Marker | null>(null);
+    const [tempMarker, setTempMarker] = useState<any | null>(null);
     const [mapMessage, setMapMessage] = useState<string | null>(null);
     const [showCultureMessage, setShowCultureMessage] = useState<boolean>(true);
     const [discoveredPlace, setDiscoveredPlace] = useState<DiscoveredPlace | null>(null);
@@ -469,7 +472,7 @@ const Map: React.FC<MapProps> = ({
 
                 let initResult: any = null;
                 try {
-                    const registeredApi = (mapFacade as any).getRegisteredApi ? (mapFacade as any).getRegisteredApi() : (mapFacade as any).INTERNAL?.api;
+                    const registeredApi = typeof mapFacade().getRegisteredApi === 'function' ? mapFacade().getRegisteredApi() : (INTERNAL as any)?.api;
                     if (registeredApi && (registeredApi.map || registeredApi.mapInstance)) {
                         initResult = registeredApi;
                     }
@@ -492,11 +495,11 @@ const Map: React.FC<MapProps> = ({
                     }
                 }
 
-                const facadeApi = (mapFacade as any)?.INTERNAL?.api || initResult || {};
+                const facadeApi = (INTERNAL as any)?.api || initResult || {};
                 if (facadeApi && (facadeApi as any).map) {
-                    mapRef.current = (facadeApi as any).map as L.Map;
+                    mapRef.current = (facadeApi as any).map as any;
                 } else if (facadeApi && (facadeApi as any).mapInstance) {
-                    mapRef.current = (facadeApi as any).mapInstance as L.Map;
+                    mapRef.current = (facadeApi as any).mapInstance as any;
                                 } else {
                     // FACADE: Используем OSMMapRenderer вместо прямого вызова L.map
                     try {
@@ -504,7 +507,7 @@ const Map: React.FC<MapProps> = ({
                         const mapRenderer = new OSMMapRenderer();
 
                         // ИСПРАВЛЕНИЕ 2: Передаем 'map' в initialize
-                        mapRenderer.initialize('map');
+                        await mapRenderer.init('map-container', config);
 
                         // Получаем инстанс карты Leaflet из фасада для совместимости с остальным кодом
                         mapRef.current = mapRenderer.getMap();
@@ -522,33 +525,38 @@ const Map: React.FC<MapProps> = ({
                 if (mapRef.current && typeof (mapRef.current as any).addLayer !== 'function') {
                     const possibleInner = (facadeApi as any)?.map || (facadeApi as any)?.mapInstance || (initResult && (initResult as any).map);
                     if (possibleInner && typeof possibleInner.addLayer === 'function') {
-                        mapRef.current = possibleInner as L.Map;
+                        mapRef.current = possibleInner as any;
                     }
                 }
 
                 const tileLayerInfo = getTileLayer(mapSettings.mapType);
                 let hasTileLayer = false;
                 map.eachLayer((layer: any) => {
-                    if (layer instanceof L.TileLayer && layer._url === 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png') {
+                    // Avoid direct instanceof check against Leaflet classes; rely on layer properties instead
+                    if ((layer as any)?._url === 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png') {
                         hasTileLayer = true;
                         tileLayerRef.current = layer;
                     }
                 });
 
                 if (!hasTileLayer) {
-                     const tileLayer = L.tileLayer(tileLayerInfo.url, {
+                    // Use facade to add tile layer so we keep Leaflet usage centralized
+                    const tileLayer = mapFacade().addTileLayer(tileLayerInfo.url, {
                         attribution: tileLayerInfo.attribution,
                         maxZoom: 19,
                         subdomains: 'abc',
-                    }).addTo(map);
+                    });
                     tileLayerRef.current = tileLayer;
                 }
 
                 const additionalLayers = getAdditionalLayers(mapSettings.showTraffic, mapSettings.showBikeLanes);
-                additionalLayers.forEach(layer => layer.addTo(map));
+                additionalLayers.forEach(layer => {
+                    // layers may be L.TileLayer instances, add them using facade when map is managed by facade
+                    try { (layer as any).addTo(map); } catch (e) { }
+                });
 
                 if (!map.zoomControl) {
-                    L.control.zoom({ position: 'bottomright' }).addTo(map);
+                    mapFacade().setZoomControl('bottomright');
                 }
 
                 setTimeout(() => {
@@ -577,7 +585,7 @@ const Map: React.FC<MapProps> = ({
                     }
                 });
 
-                mapRef.current!.on('click', async (e: L.LeafletMouseEvent) => {
+                mapRef.current!.on('click', async (e: any) => {
                     if (isAddingMarkerModeRef.current) {
                         if (tempMarkerRef.current) {
                             mapRef.current!.removeLayer(tempMarkerRef.current);
@@ -590,18 +598,18 @@ const Map: React.FC<MapProps> = ({
                         const screenCenterY = mapSize.y / 2;
                         const offsetY = targetScreenY - screenCenterY;
                         const projectedClick = mapRef.current!.project(clickedLatLng, zoom);
-                        const targetCenterPoint = L.point(projectedClick.x, projectedClick.y - offsetY);
+                        const targetCenterPoint = mapFacade().point(projectedClick.x, projectedClick.y - offsetY);
                         const targetCenterLatLng = mapRef.current!.unproject(targetCenterPoint, zoom);
                         mapRef.current!.setView(targetCenterLatLng, zoom, { animate: true });
 
-                        const tempIcon = L.divIcon({
+                        const tempIcon = mapFacade().createDivIcon({
                             className: 'temp-marker-icon',
                             html: '<div style="background-color: red; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 3000;"></div>',
                             iconSize: [20, 20],
                             iconAnchor: [10, 10],
                         });
 
-                        const newTempMarker = L.marker(clickedLatLng, { icon: tempIcon }).addTo(mapRef.current!);
+                        const newTempMarker = mapFacade().createMarker([clickedLatLng.lat, clickedLatLng.lng], { icon: tempIcon });
                         setTempMarker(newTempMarker);
 
                         const placeFound = await handlePlaceDiscovery(clickedLatLng.lat, clickedLatLng.lng);
@@ -699,11 +707,11 @@ const Map: React.FC<MapProps> = ({
             map.removeLayer(tileLayerRef.current);
         }
 
-        const newTileLayer = L.tileLayer(tileLayerInfo.url, {
+        const newTileLayer = mapFacade().addTileLayer(tileLayerInfo.url, {
             attribution: tileLayerInfo.attribution,
             maxZoom: 19,
             subdomains: 'abc',
-        }).addTo(map);
+        });
         tileLayerRef.current = newTileLayer;
     }, [mapSettings.mapType]);
 
@@ -713,10 +721,10 @@ const Map: React.FC<MapProps> = ({
         const map = mapRef.current;
 
         map.eachLayer((layer: any) => {
-            if (layer instanceof L.TileLayer &&
-                ((layer as any).getContainer?.()?.className?.includes('traffic-layer') ||
-                    (layer as any).getContainer?.()?.className?.includes('bike-lanes-layer'))) {
-                map.removeLayer(layer);
+            // Avoid instanceof checks against Leaflet classes; rely on properties instead
+            const containerClass = (layer as any).getContainer?.()?.className || '';
+            if (((layer as any)?._url || containerClass.includes('traffic-layer') || containerClass.includes('bike-lanes-layer'))) {
+                try { map.removeLayer(layer); } catch (e) { }
             }
         });
 
@@ -748,21 +756,23 @@ const Map: React.FC<MapProps> = ({
         }
 
         mapRef.current.eachLayer((layer: any) => {
-            if (L && layer instanceof L.Marker && layer !== tempMarkerRef.current) {
-                mapRef.current?.removeLayer(layer);
+            // Avoid direct instanceof checks; remove layers that look like markers and aren't the temp marker
+            if (layer && (layer as any).markerData && layer !== tempMarkerRef.current) {
+                try { mapRef.current?.removeLayer(layer); } catch (e) { }
             }
         });
 
-        if (!(L as any).markerClusterGroup) return;
+        // Create a marker cluster group via the facade (keeps Leaflet usage centralized)
+        if (!mapFacade().createMarkerClusterGroup) return;
 
-        const markerClusterGroup = (L as any).markerClusterGroup({
+        const markerClusterGroup = mapFacade().createMarkerClusterGroup({
             showCoverageOnHover: false,
             maxClusterRadius: 50,
             spiderfyOnMaxZoom: true,
             animate: true,
             iconCreateFunction: function (cluster: any) {
                 const count = cluster.getChildCount();
-                return L.divIcon({
+                return mapFacade().createDivIcon({
                     html: `<div class="marker-cluster"><span>${count}</span></div>`,
                     className: 'marker-cluster-custom',
                     iconSize: [40, 40]
@@ -789,7 +799,7 @@ const Map: React.FC<MapProps> = ({
                 const iconColor = isPending ? '#ff9800' : (isInRadius ? themeColor : (getCategoryColor(markerCategory) || markerCategoryStyle.color));
                 const faIconName = getFontAwesomeIconName(markerCategory);
 
-                const customIcon = new L.Icon({
+                const customIcon = mapFacade().createIcon({
                     iconUrl: markerIconUrl,
                     iconSize: [iconWidth, iconHeight],
                     iconAnchor: [iconWidth / 2, iconHeight],
@@ -797,11 +807,11 @@ const Map: React.FC<MapProps> = ({
                     className: `marker-category-${markerCategory}${isHot ? ' marker-hot' : ''}${markerCategory === 'user_poi' ? ' marker-user-poi' : ''}${isPending ? ' marker-pending' : ''}`,
                 });
 
-                const leafletMarker = L.marker([lat, lng], { icon: customIcon });
+                const leafletMarker = mapFacade().createMarker([lat, lng], { icon: customIcon });
 
                 const img = new Image();
                 img.onerror = () => {
-                    const divIcon = L.divIcon({
+                    const divIcon = mapFacade().createDivIcon({
                         className: `marker-icon marker-category-${markerCategory}${isHot ? ' marker-hot' : ''}`,
                         html: `<div class="marker-base" style="background-color: ${iconColor};"><i class="fas ${faIconName}"></i></div>`,
                         iconSize: [iconWidth, iconHeight],
@@ -819,12 +829,12 @@ const Map: React.FC<MapProps> = ({
                     closeButton: false,
                     maxWidth: 441,
                     maxHeight: 312,
-                    offset: L.point(0, -10),
+                    offset: mapFacade().point(0, -10),
                 };
 
                 leafletMarker.bindPopup('', popupOptions);
 
-                leafletMarker.on('popupopen', (e: L.PopupEvent) => {
+                leafletMarker.on('popupopen', (e: any) => {
                     try {
                         if (!mapRef.current) {
                             setTimeout(() => {
@@ -837,7 +847,8 @@ const Map: React.FC<MapProps> = ({
 
                         let hasTileLayer = false;
                         mapRef.current.eachLayer((layer: any) => {
-                            if (layer instanceof L.TileLayer) hasTileLayer = true;
+                            // Avoid instanceof checks; assume presence of _url means a tile layer
+                            if ((layer as any)?._url) hasTileLayer = true;
                         });
 
                         if (!hasTileLayer) {
@@ -914,7 +925,7 @@ const Map: React.FC<MapProps> = ({
                 leafletMarker.on('mouseover', () => {
                     setMiniPopup({
                         marker: markerData,
-                        position: latLngToContainerPoint(L.latLng(Number(markerData.latitude), Number(markerData.longitude)))
+                        position: latLngToContainerPoint(mapFacade(), mapFacade().latLng(Number(markerData.latitude), Number(markerData.longitude)))
                     });
                 });
 
@@ -966,7 +977,7 @@ const Map: React.FC<MapProps> = ({
                     const isSelected = selectedEvent?.id === event.id;
                     const iconSize = isSelected ? 50 : 40;
 
-                    const eventIcon = L.divIcon({
+                    const eventIcon = mapFacade().createDivIcon({
                         className: `event-marker-icon ${isSelected ? 'event-marker-selected' : ''}`,
                         html: `<div class="event-marker-base" style="width: ${iconSize}px; height: ${iconSize}px; background-color: ${categoryColor}; border: 2px solid #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); ${isSelected ? 'animation: eventMarkerPulse 2s ease-in-out infinite;' : ''}"><i class="fas ${categoryIcon}" style="color: #ffffff; font-size: ${iconSize * 0.4}px;"></i></div>`,
                         iconSize: [iconSize, iconSize],
@@ -974,7 +985,7 @@ const Map: React.FC<MapProps> = ({
                         popupAnchor: [0, -iconSize],
                     });
 
-                    const eventMarker = L.marker([lat, lng], { icon: eventIcon });
+                    const eventMarker = mapFacade().createMarker([lat, lng], { icon: eventIcon });
                     (eventMarker as any).eventData = event;
 
                     eventMarker.on('click', (e: any) => {
@@ -985,7 +996,7 @@ const Map: React.FC<MapProps> = ({
                     eventMarker.on('mouseover', () => {
                         setEventMiniPopup({
                             event: event,
-                            position: latLngToContainerPoint(L.latLng(lat, lng))
+                            position: latLngToContainerPoint(mapFacade(), mapFacade().latLng(lat, lng))
                         });
                     });
 
@@ -1014,7 +1025,8 @@ const Map: React.FC<MapProps> = ({
 
         let hasTileLayer = false;
         mapRef.current.eachLayer((layer: any) => {
-            if (layer instanceof L.TileLayer) hasTileLayer = true;
+            // rely on characteristic property instead of instanceof
+            if ((layer as any)?._url) hasTileLayer = true;
         });
 
         if (!hasTileLayer) {
@@ -1088,14 +1100,14 @@ const Map: React.FC<MapProps> = ({
     useEffect(() => {
         if (!mapRef.current || !routeData) return;
 
-        mapRef.current.eachLayer((layer: L.Layer) => {
+        mapRef.current.eachLayer((layer: any) => {
             if ((layer as any).isRouteLayer) {
-                mapRef.current?.removeLayer(layer);
+                try { mapRef.current?.removeLayer(layer); } catch (e) { }
             }
         });
 
-        let routePolyline: L.Polyline | null = null;
-        let allLatLngs: L.LatLng[] = [];
+        let routePolyline: any = null;
+        let allLatLngs: any[] = [];
 
         const hasPolyline = routeData.polyline && Array.isArray(routeData.polyline) && routeData.polyline.length > 1;
         if (hasPolyline) {
@@ -1106,7 +1118,7 @@ const Map: React.FC<MapProps> = ({
             );
 
             if (validPolyline.length >= 2) {
-                routePolyline = L.polyline(validPolyline, {
+                routePolyline = mapFacade().createPolyline(validPolyline, {
                     color: '#ff3b3b',
                     weight: 4,
                     opacity: 0.9,
@@ -1115,9 +1127,8 @@ const Map: React.FC<MapProps> = ({
                 });
                 if (routePolyline) {
                     (routePolyline as any).isRouteLayer = true;
-                    routePolyline.addTo(mapRef.current);
                 }
-                allLatLngs = validPolyline.map(([lat, lng]) => L.latLng(lat, lng));
+                allLatLngs = validPolyline.map(([lat, lng]) => mapFacade().latLng(lat, lng));
             }
         }
 
@@ -1126,7 +1137,7 @@ const Map: React.FC<MapProps> = ({
                 .map((m: any) => [Number(m.latitude), Number(m.longitude)] as [number, number])
                 .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
             if (fallback.length > 1) {
-                routePolyline = L.polyline(fallback, {
+                routePolyline = mapFacade().createPolyline(fallback, {
                     color: '#ff3b3b',
                     weight: 4,
                     opacity: 0.9,
@@ -1135,9 +1146,8 @@ const Map: React.FC<MapProps> = ({
                 });
                 if (routePolyline) {
                     (routePolyline as any).isRouteLayer = true;
-                    routePolyline.addTo(mapRef.current);
                 }
-                allLatLngs = fallback.map(([lat, lng]) => L.latLng(lat, lng));
+                allLatLngs = fallback.map(([lat, lng]) => mapFacade().latLng(lat, lng));
             }
         }
 
@@ -1151,22 +1161,21 @@ const Map: React.FC<MapProps> = ({
                 const lat = parseFloat(marker.latitude);
                 const lng = parseFloat(marker.longitude);
                 if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                    const routeIcon = L.divIcon({
+                    const routeIcon = mapFacade().createDivIcon({
                         className: 'route-marker-icon',
                         html: `<div class="route-marker-base"><div class="route-marker-number">${index + 1}</div><div class="route-marker-icon-inner"><i class="fas fa-route"></i></div></div>`,
                         iconSize: [40, 40],
                         iconAnchor: [20, 40]
                     });
-                    const routeMarker = L.marker([lat, lng], { icon: routeIcon });
+                    const routeMarker = mapFacade().createMarker([lat, lng], { icon: routeIcon });
                     (routeMarker as any).isRouteLayer = true;
-                    routeMarker.addTo(mapRef.current!);
                 }
             });
         }
 
         if (mapRef.current && allLatLngs.length > 0) {
-            const bounds = L.latLngBounds(allLatLngs);
-            mapRef.current.fitBounds(bounds, { padding: [60, 60] });
+            const bounds = mapFacade().latLngBounds(allLatLngs);
+            mapFacade().fitBounds(bounds, { padding: [60, 60] });
         }
 
         let zoomHandler: any;
@@ -1208,9 +1217,9 @@ const Map: React.FC<MapProps> = ({
     useEffect(() => {
         if (!mapRef.current) return;
 
-        mapRef.current.eachLayer((layer: L.Layer) => {
-            if (layer instanceof L.Polygon && (layer as any).isZoneLayer) {
-                mapRef.current?.removeLayer(layer);
+        mapRef.current.eachLayer((layer: any) => {
+            if ((layer as any)?.isZoneLayer) {
+                try { mapRef.current?.removeLayer(layer); } catch (e) { }
             }
         });
 
@@ -1219,14 +1228,13 @@ const Map: React.FC<MapProps> = ({
 
             zone.polygons.forEach(ring => {
                 const latLngs = ring.map(([lng, lat]) => [lat, lng] as [number, number]);
-                const polygon = L.polygon(latLngs, {
+                const polygon = mapFacade().createPolygon(latLngs, {
                     color: color,
                     fillColor: color,
                     fillOpacity: 0.2,
                     weight: 2,
                 });
                 (polygon as any).isZoneLayer = true;
-                polygon.addTo(mapRef.current!);
             });
         });
     }, [zones]);
@@ -1241,20 +1249,20 @@ const Map: React.FC<MapProps> = ({
     // --- SEARCH RADIUS CIRCLE ---
     useEffect(() => {
         if (!mapRef.current) return;
-        let radiusCircle: L.Circle | null = null;
+        let radiusCircle: any = null;
 
         if (filters.radiusOn) {
-            radiusCircle = L.circle(searchRadiusCenter, {
+            radiusCircle = mapFacade().createCircle(searchRadiusCenter, {
                 radius: filters.radius * 1000,
                 color: mapSettings.themeColor,
                 fillColor: mapSettings.themeColor,
                 fillOpacity: 0.15,
                 weight: 2,
                 interactive: true,
-            }).addTo(mapRef.current);
+            });
 
             if (radiusCircle) {
-                radiusCircle.on('mousedown', function (_) {
+                radiusCircle.on('mousedown', function (_: any) {
                     mapRef.current!.dragging.disable();
                     const onMove = (ev: any) => {
                         if (radiusCircle) radiusCircle.setLatLng(ev.latlng);
@@ -1397,11 +1405,8 @@ const Map: React.FC<MapProps> = ({
     }, [externalIsAddingMarkerMode]);
 
     // --- HELPER FUNCTIONS ---
-    function latLngToContainerPoint(latlng: L.LatLng): { x: number; y: number } {
-        if (!mapRef.current) return { x: 0, y: 0 };
-        const point = mapRef.current.latLngToContainerPoint(latlng);
-        return { x: point.x, y: point.y };
-    }
+    // NOTE: use `latLngToContainerPoint` from `mapUtils` which uses facade to avoid leaking map instance
+    // Local helper removed — use exported `latLngToContainerPoint(mapFacade, latlng)` instead.
 
     // --- MAP READY CHECK ---
     const isMapReadyCheck = isMapReady || mapRef.current || ((mapFacade() as any)?.INTERNAL?.api?.map);
@@ -1412,7 +1417,7 @@ const Map: React.FC<MapProps> = ({
         const marker = markersData.find(m => m.id === selectedMarkerIdForPopup);
         if (!marker) return null;
 
-        const markerPosition = latLngToContainerPoint(L.latLng(Number(marker.latitude), Number(marker.longitude)));
+        const markerPosition = latLngToContainerPoint(mapFacade(), mapFacade().latLng(Number(marker.latitude), Number(marker.longitude)));
 
         return (
             <div
@@ -1506,8 +1511,8 @@ const Map: React.FC<MapProps> = ({
                 key={`selected-${markerId}`}
                 style={{
                     position: 'absolute',
-                    left: latLngToContainerPoint(L.latLng(Number(marker.latitude), Number(marker.longitude))).x,
-                    top: latLngToContainerPoint(L.latLng(Number(marker.latitude), Number(marker.longitude))).y,
+                    left: latLngToContainerPoint(mapFacade(), mapFacade().latLng(Number(marker.latitude), Number(marker.longitude))).x,
+                    top: latLngToContainerPoint(mapFacade(), mapFacade().latLng(Number(marker.latitude), Number(marker.longitude))).y,
                     zIndex: 1199,
                     transform: 'translate(-50%, -100%)',
                 }}

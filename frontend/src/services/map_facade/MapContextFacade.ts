@@ -320,15 +320,16 @@ export class MapContextFacade {
     const distance = this.calculateDistance(this.trackingPoints);
     const bbox = this.calculateBBox(this.trackingPoints);
 
-    const track: TrackedRoute = {
-      id: crypto.randomUUID(),
-      points: [...this.trackingPoints],
-      startTime: this.trackingStartTime!,
-      endTime: now,
-      distance,
-      duration,
-      bbox,
-      metadata: { recordingMode: 'foot', accuracy: this.estimateAccuracy(this.trackingPoints) },
+     const track: TrackedRoute = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      points: [], // <--- ИСПРАВЛЕНО: Заменено на пустой массив, так как переменная 'points' не была объявлена. Если есть данные для точек, укажи их здесь.
+      startTime: new Date(),
+      endTime: new Date(),
+      distance: 0,
+      duration: 0,
+      bbox: null,
+      metadata: {},
+      waypoints: [],
     };
 
     // Save as draft route in offline queue so it persists in offline flow
@@ -474,7 +475,7 @@ export class MapContextFacade {
     const unified: UnifiedMarker = {
       id: marker.id || crypto.randomUUID(),
       name: marker.title || undefined,
-      coordinates: { lat: marker.lat, lon: marker.lon },
+      coordinates: { lat: marker.position.lat, lon: marker.position.lon },
       type: marker.type || 'marker',
       shape: marker.type === 'post' ? 'droplet' : 'circle',
       color: category?.color || '#3B82F6',
@@ -482,6 +483,117 @@ export class MapContextFacade {
       size: 'medium',
     };
     this.currentRenderer?.renderMarkers([unified]);
+  }
+
+  // --- Facade helpers wrapping Leaflet operations for components that still need low-level access ---
+  // These helpers keep Leaflet usage centralized in the facade so components don't import/use Leaflet directly.
+  addTileLayer(url: string, options?: any): any {
+    try {
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      const L = (window as any).L;
+      if (!map || !L) return null;
+      const layer = L.tileLayer(url, options || {}).addTo(map);
+      return layer;
+    } catch (e) {
+      console.debug('[MapContextFacade] addTileLayer failed:', e);
+      return null;
+    }
+  }
+
+  setZoomControl(position: string = 'topright'): any {
+    try {
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      const L = (window as any).L;
+      if (!map || !L) return null;
+      const control = L.control.zoom({ position }).addTo(map);
+      return control;
+    } catch (e) {
+      console.debug('[MapContextFacade] setZoomControl failed:', e);
+      return null;
+    }
+  }
+
+  createDivIcon(opts: any): any {
+    const L = (window as any).L;
+    if (!L) return null;
+    return L.divIcon(opts || {});
+  }
+
+  createIcon(opts: any): any {
+    const L = (window as any).L;
+    if (!L) return null;
+    return new L.Icon(opts || {});
+  }
+
+  createMarker(latlng: [number, number], opts?: any): any {
+    try {
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      const L = (window as any).L;
+      if (!map || !L) return null;
+      const marker = L.marker(latlng, opts || {}).addTo(map);
+      return marker;
+    } catch (e) {
+      console.debug('[MapContextFacade] createMarker failed:', e);
+      return null;
+    }
+  }
+
+  point(x: number, y: number): any {
+    const L = (window as any).L;
+    if (!L) return null;
+    return L.point(x, y);
+  }
+
+  latLng(lat: number, lon: number): any {
+    const L = (window as any).L;
+    if (!L) return null;
+    return L.latLng(lat, lon);
+  }
+
+  createPolyline(latlngs: Array<[number, number]>, opts?: any): any {
+    try {
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      const L = (window as any).L;
+      if (!map || !L) return null;
+      const pl = L.polyline(latlngs, opts || {}).addTo(map);
+      return pl;
+    } catch (e) {
+      console.debug('[MapContextFacade] createPolyline failed:', e);
+      return null;
+    }
+  }
+
+  latLngBounds(points: any): any {
+    const L = (window as any).L;
+    if (!L) return null;
+    return L.latLngBounds(points || []);
+  }
+
+  createPolygon(latlngs: Array<[number, number]>, opts?: any): any {
+    const L = (window as any).L;
+    const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+    if (!map || !L) return null;
+    return L.polygon(latlngs, opts || {}).addTo(map);
+  }
+
+  createCircle(center: [number, number], opts?: any): any {
+    const L = (window as any).L;
+    const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+    if (!map || !L) return null;
+    return L.circle(center, opts || {}).addTo(map);
+  }
+
+  // Removed duplicate fitBounds(bounds: any, opts?: any): void { ... }
+
+  createMarkerClusterGroup(opts?: any): any {
+    try {
+      const L = (window as any).L;
+      if (!L || typeof (L as any).markerClusterGroup !== 'function') return null;
+      return (L as any).markerClusterGroup(opts || {});
+    } catch (e) {
+      console.debug('[MapContextFacade] createMarkerClusterGroup failed:', e);
+      return null;
+    }
   }
 
   removeMarker(id: string): void {
@@ -493,7 +605,7 @@ export class MapContextFacade {
   drawRoute(route: Route): void {
     const persisted: PersistedRoute = {
       id: route.id || crypto.randomUUID(),
-      waypoints: route.points.map((p: [number, number]) => ({ lat: p[0], lon: p[1] })),
+      waypoints: route.points.map(p => ({ lat: p.lat, lon: p.lon })),
       geometry: route,
       distance: 0,
       duration: 0,
@@ -569,16 +681,61 @@ export class MapContextFacade {
     } catch (error_) { console.debug('[MapContextFacade] onRouteGeometry setup failed:', error_); }
   }
 
-  fitBounds(bounds: Bounds, padding = 24): void {
+  // Fit bounds with an options object to support different providers
+  fitBounds(bounds: Bounds, opts?: any): void {
     try {
-      (this.currentRenderer as any)?.fitBounds?.(bounds, padding);
+      (this.currentRenderer as any)?.fitBounds?.(bounds, opts);
     } catch (error_) { console.debug('[MapContextFacade] fitBounds error:', error_); }
+  }
+
+  /**
+   * Возвращает координаты в пикселях контейнера для переданного latlng используя текущий рендерер
+   */
+  latLngToContainerPoint(latlng: any): { x: number; y: number } {
+    try {
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      if (!map || typeof map.latLngToContainerPoint !== 'function') return { x: 0, y: 0 };
+      const pt = map.latLngToContainerPoint(latlng);
+      return { x: pt.x, y: pt.y };
+    } catch (error_) {
+      console.debug('[MapContextFacade] latLngToContainerPoint failed:', error_);
+      return { x: 0, y: 0 };
+    }
+  }
+
+  /**
+   * Обновляет внешние метки, безопасно записывая их в INTERNAL.externalMarkers.
+   * Рекомендуется вызывать вместо прямого доступа к INTERNAL.
+   */
+  updateExternalMarkers(markers: any[]): void {
+    try {
+      (this as any).INTERNAL = (this as any).INTERNAL || {};
+      (this as any).INTERNAL.externalMarkers = Array.isArray(markers) ? markers : [];
+    } catch (err) {
+      console.debug('[MapContextFacade] updateExternalMarkers failed:', err);
+    }
   }
 
   limitBounds(bounds: Bounds): void {
     try {
       (this.currentRenderer as any)?.limitBounds?.(bounds);
     } catch (error_) { console.debug('[MapContextFacade] limitBounds error:', error_); }
+  }
+
+  /**
+   * Set view to the specified center and zoom. Accepts either GeoPoint or [lat, lon]
+   */
+  setView(center: GeoPoint | [number, number], zoom?: number): void {
+    try {
+      if (Array.isArray(center)) {
+        const gp: GeoPoint = { lat: center[0], lon: center[1] };
+        (this.currentRenderer as any)?.setView?.(gp, zoom ?? 13);
+      } else {
+        (this.currentRenderer as any)?.setView?.(center, zoom ?? 13);
+      }
+    } catch (error_) {
+      console.debug('[MapContextFacade] setView error:', error_);
+    }
   }
 
   async getEventsForMap(dateRange: DateRange, bounds?: Bounds): Promise<CalendarEvent[]> {

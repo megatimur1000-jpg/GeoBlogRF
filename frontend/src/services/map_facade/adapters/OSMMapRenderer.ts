@@ -1,164 +1,128 @@
 import type { IMapRenderer, MapConfig, UnifiedMarker, PersistedRoute, GeoPoint } from '../IMapRenderer';
+import L from 'leaflet';
 
 export class OSMMapRenderer implements IMapRenderer {
   private containerId: string | null = null;
-  private map: any = null;
+  private mapInstance: L.Map | null = null;
+  private leafletMarkers: Record<string, L.Marker> = {};
 
-  async init(containerId: string, config?: MapConfig): Promise<void> {
-    this.containerId = containerId;
-    const container = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
+  // Соответствует интерфейсу IMapRenderer
+  public async init(containerId: string, config?: MapConfig): Promise<void> {
+    const container = document.getElementById(containerId);
     if (!container) {
-      console.error(`Map container not found: ${containerId}`);
-      throw new Error(`Container not found: ${containerId}`);
+      throw new Error(`Элемент с id "${containerId}" не найден`);
     }
 
-    // КРИТИЧНО: Проверяем что контейнер в документе
-    if (!document.body.contains(container)) {
-      console.error('[OSMMapRenderer] Container is not in document');
-      throw new Error('Container is not in document');
+    this.containerId = containerId;
+
+    // Используем координаты из config или значения по умолчанию
+    const center = config?.center;
+    let lat: number, lon: number;
+
+    if (Array.isArray(center)) {
+      // LatLng: [lat, lng]
+      lat = center[0];
+      lon = center[1];
+    } else if (center && typeof center === 'object') {
+      // GeoPoint: { lat, lon }
+      lat = center.lat;
+      lon = center.lon;
+    } else {
+      // Москва по умолчанию
+      lat = 55.7558;
+      lon = 37.6176;
     }
 
-    try {
-      // КРИТИЧНО: Ждем пока контейнер получит валидные размеры
-      let attempts = 0;
-      const maxAttempts = 100; // 10 секунд
-      while ((container.offsetWidth === 0 || container.offsetHeight === 0) && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
+    const zoom = config?.zoom ?? 10;
 
-      if (container.offsetWidth === 0 || container.offsetHeight === 0) {
-        console.error('[OSMMapRenderer] Container has zero dimensions after waiting', { attempts, width: container.offsetWidth, height: container.offsetHeight });
-        throw new Error(`Container has zero dimensions after ${attempts} attempts`);
-      }
+    this.mapInstance = L.map(containerId, {
+      center: [lat, lon],
+      zoom,
+      zoomControl: true,
+    });
 
-      // КРИТИЧНО: Если в контейнере уже есть старая карта - уничтожаем её перед созданием новой
-      if ((container as any).__leafletMap) {
-        try {
-          (container as any).__leafletMap.remove();
-        } catch (e) {
-          // ignore
-        }
-      }
+    this.addTileLayer();
 
-      // Import Leaflet dynamically
-      const L = (window as any).L;
-      if (!L || !L.map) {
-        console.error('Leaflet library not loaded');
-        throw new Error('Leaflet library not loaded');
-      }
-
-      // Create Leaflet map
-      const centerLat = ((config?.center as any)?.[0] as number) || 55.7558;
-      const centerLon = ((config?.center as any)?.[1] as number) || 37.6176;
-      console.log('[OSMMapRenderer] Creating map with container size:', { width: container.offsetWidth, height: container.offsetHeight });
-      this.map = L.map(container).setView(
-        [centerLat, centerLon],
-        config?.zoom || 6
-      );
-
-      // Сохраняем ссылку на карту для последующей проверки
-      (container as any).__leafletMap = this.map;
-
-      // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-      }).addTo(this.map);
-
-      // КРИТИЧНО: Пересчитываем размер карты после инициализации
-      // Это гарантирует что тайлы загрузятся правильно
-      setTimeout(() => {
-        try {
-          this.map.invalidateSize();
-          console.log('[OSMMapRenderer] Map size invalidated successfully');
-        } catch (e) {
-          console.warn('[OSMMapRenderer] Failed to invalidate size:', e);
-        }
-      }, 100);
-
-      // Дополнительная проверка размера через 500ms для медленных DOM-операций
-      setTimeout(() => {
-        try {
-          if (this.map && container.offsetWidth > 0 && container.offsetHeight > 0) {
-            this.map.invalidateSize();
-            console.log('[OSMMapRenderer] Final size invalidation completed');
-          }
-        } catch (e) {
-          console.warn('[OSMMapRenderer] Failed final size invalidation:', e);
-        }
-      }, 500);
-
-      console.log('[OSMMapRenderer] Leaflet map initialized successfully');
-      return this.map;
-    } catch (error) {
-      console.error('[OSMMapRenderer] Failed to initialize Leaflet map:', error);
-      throw error;
-    }
+    // Небольшая задержка для корректного отображения (опционально)
+    setTimeout(() => {
+      this.mapInstance?.invalidateSize();
+    }, 100);
   }
 
-  private leafletMarkers: Record<string, any> = {};
+  private addTileLayer(): void {
+    if (!this.mapInstance) return;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(this.mapInstance);
+  }
+
+  public getMap(): L.Map {
+    if (!this.mapInstance) {
+      throw new Error('Карта не инициализирована');
+    }
+    return this.mapInstance;
+  }
 
   renderMarkers(markers: UnifiedMarker[]): void {
-    if (!this.map) {
+    if (!this.mapInstance) {
       console.warn('[OSMMapRenderer] Map not initialized, cannot render markers');
       return;
     }
-    // Удаляем старые маркеры, которых нет в новом списке
+
     const newIds = new Set(markers.map(m => m.id));
     Object.keys(this.leafletMarkers).forEach(id => {
       if (!newIds.has(id)) {
-        this.map.removeLayer(this.leafletMarkers[id]);
+        this.mapInstance!.removeLayer(this.leafletMarkers[id]);
         delete this.leafletMarkers[id];
       }
     });
 
-    // Добавляем новые маркеры
     markers.forEach(marker => {
       if (!this.leafletMarkers[marker.id]) {
-        const L = (window as any).L;
-        if (!L) return;
         const leafletMarker = L.marker([marker.coordinates.lat, marker.coordinates.lon], {
           title: marker.title || marker.name || '',
         });
-        leafletMarker.addTo(this.map);
+        leafletMarker.addTo(this.mapInstance!);
         this.leafletMarkers[marker.id] = leafletMarker;
       }
     });
+
     console.log(`[OSMMapRenderer] Rendering ${markers.length} markers`);
   }
 
   renderRoute(route: PersistedRoute): void {
-    if (!this.map) {
+    if (!this.mapInstance) {
       console.warn('[OSMMapRenderer] Map not initialized, cannot render route');
       return;
     }
     console.log(`[OSMMapRenderer] Rendering route ${route.id}`);
-    // Implementation would add route polyline to Leaflet map
+    // Реализация отрисовки маршрута (полилиния и т.д.)
   }
 
   setView(center: GeoPoint, zoom: number): void {
-    if (!this.map) {
+    if (!this.mapInstance) {
       console.warn('[OSMMapRenderer] Map not initialized, cannot set view');
       return;
     }
     try {
-      this.map.setView([center.lat, center.lon], zoom);
+      this.mapInstance.setView([center.lat, center.lon], zoom);
     } catch (e) {
       console.warn('[OSMMapRenderer] Failed to set view:', e);
     }
   }
 
   destroy(): void {
-    if (this.map) {
+    if (this.mapInstance) {
       try {
-        // Очищаем ссылку из контейнера перед уничтожением
-        const container = this.map.getContainer();
-        if (container && (container as any).__leafletMap) {
+        const container = this.mapInstance.getContainer();
+        if (container) {
+          // Удаляем возможную ссылку
           delete (container as any).__leafletMap;
         }
-        this.map.remove();
-        this.map = null;
+        this.mapInstance.remove();
+        this.mapInstance = null;
+        this.leafletMarkers = {};
       } catch (e) {
         console.warn('[OSMMapRenderer] Error destroying map:', e);
       }

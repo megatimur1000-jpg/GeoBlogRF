@@ -2,10 +2,10 @@
 // Базовые гео-типы
 // ========================
 
-export type GeoPoint = {
+export interface GeoPoint {
   lat: number;
   lon: number;
-};
+}
 
 export type LatLng = [number, number]; // [lat, lng] — как в Leaflet
 
@@ -84,6 +84,27 @@ export interface TrackedRoute extends PersistedRoute {
   endTime: Date;
   metadata?: Record<string, unknown>;
   bbox?: Bounds | null;
+}
+
+// ========================
+// Отдельные интерфейсы для внешнего использования (например, фасада)
+// ========================
+
+export interface MapMarker {
+  id: string;
+  position: GeoPoint;
+  title?: string;
+  category?: string;
+  type?: string;
+  // Добавь остальные поля, если они нужны, например: icon, popup и т.д.
+}
+
+export interface Route {
+  id: string;
+  points: GeoPoint[];
+  distance: number;
+  duration: number;
+  // ... остальные поля
 }
 
 // ========================
@@ -183,12 +204,27 @@ export interface IMapRenderer {
   // Доступ к инстансу (для расширенных сценариев)
   getMap?(): unknown;
 
-  // Работа со слоями
-  addTileLayer?(url: string, options?: Record<string, unknown>): void;
+  // --- Доп. утилиты (опциональные) для упрощения работы компонентов через фасад ---
+  addTileLayer?(url: string, options?: any): any;
+  setZoomControl?(position?: string): any;
+  createDivIcon?(opts?: any): any;
+  createIcon?(opts?: any): any;
+  createMarker?(latlng: any, opts?: any): any;
+  point?(x: number, y: number): any;
+  latLng?(lat: number, lon: number): any;
+  createPolyline?(latlngs: Array<[number, number]>, opts?: any): any;
+  latLngBounds?(points: any): any;
+  createPolygon?(latlngs: Array<[number, number]>, opts?: any): any;
+  createCircle?(center: [number, number], opts?: any): any;
+  fitBounds?(bounds: any, opts?: any): void;
+  createMarkerClusterGroup?(opts?: any): any;
+  latLngToContainerPoint?(latlng: any): { x: number; y: number };
+
+
+
 
   // Обработка событий
   onClick?(handler: (latLng: LatLng) => void): void;
   onMapMove?(handler: () => void): void;
   onMapZoom?(handler: () => void): void;
 }
-

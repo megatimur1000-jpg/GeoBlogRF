@@ -166,10 +166,12 @@ const MapPage: React.FC<MapPageProps> = ({ selectedMarkerId, showOnlySelected = 
       } as MarkerData));
       setAllMarkers(restoredMarkers);
 
-      // Также повторно передаём в фасад
-      if (INTERNAL) {
-        INTERNAL.externalMarkers = cachedMarkers;
+      // Также повторно передаём в фасад через публичный метод (не используем INTERNAL напрямую)
+      try {
+        mapFacade().updateExternalMarkers(cachedMarkers);
         console.log('[MapPage] Restored markers passed to facade');
+      } catch (err) {
+        console.warn('[MapPage] Failed passing restored markers to facade:', err);
       }
     }
   }, [markersLoaded, cachedMarkers.length]); // Не зависим от allMarkers чтобы избежать циклов
@@ -384,21 +386,10 @@ const MapPage: React.FC<MapPageProps> = ({ selectedMarkerId, showOnlySelected = 
       mapStateHelpers.setMarkers(markers);
       console.log('[MapPage] Markers saved to central store');
 
-      // Проверяем, что INTERNAL доступен и пытаемся передать маркеры
-      const tryPassMarkers = (attempt = 0) => {
-        if (INTERNAL) {
-          INTERNAL.externalMarkers = markers;
-          console.log('[MapPage] Markers passed to facade successfully');
-        } else if (attempt < 5) {
-          // Если фасад не готов, пробуем снова через 200ms (до 5 попыток)
-          console.warn(`[MapPage] Facade not ready, retry ${attempt + 1}/5`);
-          setTimeout(() => tryPassMarkers(attempt + 1), 200);
-        } else {
-          console.error('[MapPage] Facade not ready after 5 attempts, markers not passed');
-        }
-      };
-
-      tryPassMarkers();
+      // NOTE: Do not write directly into INTERNAL from render-time.
+      // We let the final, filtered effect sync markers into the facade to avoid conflicts.
+      // If early synchronization is required, use `mapFacade().updateExternalMarkers(markers)` here.
+      // mapFacade().updateExternalMarkers(markers); // optional
     }
   }, [allMarkers]);
 
@@ -942,8 +933,16 @@ const MapPage: React.FC<MapPageProps> = ({ selectedMarkerId, showOnlySelected = 
   // Используем только отфильтрованные маркеры (без модерации на карте)
   const allMarkersWithModeration = filteredMarkers;
 
-  // Синхронизируем метки с mapFacade
-  INTERNAL.externalMarkers = allMarkersWithModeration;
+  // Синхронизируем метки с mapFacade (в useEffect чтобы избежать сайд-эффектов в рендере)
+  useEffect(() => {
+    // Передаём только отфильтрованные маркеры для отображения на карте
+    try {
+      mapFacade().updateExternalMarkers(allMarkersWithModeration);
+      console.debug('[MapPage] External markers synchronized to facade:', allMarkersWithModeration.length);
+    } catch (err) {
+      console.warn('[MapPage] Failed to update facade external markers:', err);
+    }
+  }, [allMarkersWithModeration]);
 
   // Раньше здесь автоматически открывалась левая панель с картой при монтировании
   // страницы, что приводило к нежелательной предзагрузке карты. Оставляем
