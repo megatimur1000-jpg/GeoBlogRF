@@ -21,18 +21,16 @@ const ActivityHeader = React.memo(() => {
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center space-x-2">
           <FaBell className="w-5 h-5 text-slate-400" />
-          <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Лента активности</h1>
-        </div>
-        
+          <h1 className="text-lg font-semibold activity-title">Лента активности</h1>
         {/* Статус активности - стабилизирован */}
-        <div className="flex items-center space-x-2 px-3 py-1 rounded-full" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', border: '1px solid var(--border-light)' }}>
+        <div className="activity-header-status">
           <span className="text-lg">⚡</span>
           <span className="text-sm font-medium" style={{ color: 'var(--text-accent)' }}>Активный участник</span>
         </div>
       </div>
       
       {/* Вдохновляющее сообщение - стабилизировано */}
-      <div className="text-sm italic text-center mt-2" style={{ color: 'var(--text-secondary)' }}>
+      <div className="text-sm italic text-center mt-2 activity-subtitle">
         "Будьте в курсе всех событий сообщества"
       </div>
     </div>
@@ -136,19 +134,7 @@ const Activity: React.FC<ActivityProps> = ({ compact = false }) => {
         <div className="page-content-wrapper">
           <div className="page-main-panel relative">
             {/* Кнопки управления по бокам - с рамками и позиционированием */}
-            <div
-              className="page-side-buttons left"
-              style={{
-                '--left-button-size': '47px',
-                '--left-button-border-width': '2px',
-                '--left-button-border-color': '#8E9093',
-                '--left-button-bg': '#FFFFFF',
-                '--left-top': '53%',
-                '--left-translateY': '-50%',
-                '--left-offset': '5px',
-                '--left-gap': '15px',
-              } as React.CSSProperties}
-            >
+            <div className="page-side-buttons left activity-side-buttons">
               <button
                 className="page-side-button left"
                 onClick={() => setLeftPanelOpen(true)}
@@ -157,19 +143,7 @@ const Activity: React.FC<ActivityProps> = ({ compact = false }) => {
                 <FaFilter className="text-gray-600" size={20} />
               </button>
             </div>
-            <div
-              className="page-side-buttons right"
-              style={{
-                '--right-top': '55%',
-                '--right-translateY': '-50%',
-                '--right-offset': '5px',
-                '--right-gap': '15px',
-                '--right-button-size': '47px',
-                '--right-button-border-width': '2px',
-                '--right-button-border-color': '#8E9093',
-                '--right-button-bg': '#ffffff',
-              } as React.CSSProperties}
-            >
+            <div className="page-side-buttons right activity-side-buttons">
               <button
                 className="page-side-button right"
                 onClick={() => setRightPanelOpen(true)}

@@ -489,3 +489,122 @@
 
 /* Fill-flex helper used in modal lists */
 .pc-fill-flex { flex: 1; }
+
+/* --- Статистика (Stats) --- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-card {
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  color: white;
+  transition: box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-card:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+}
+
+/* Варианты цветов для статистики */
+.stat-card.blue {
+  background: linear-gradient(to right, #3b82f6, #2563eb);
+}
+.stat-card.orange {
+  background: linear-gradient(to right, #f97316, #ea580c);
+}
+.stat-card.green {
+  background: linear-gradient(to right, #22c55e, #16a34a);
+}
+.stat-card.purple {
+  background: linear-gradient(to right, #a855f7, #9333ea);
+}
+
+/* Скелетон для загрузки статистики */
+.stat-skeleton {
+  height: 2rem;
+  background-color: #e5e7eb; /* fallback gray-200 */
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+.stat-skeleton.sm {
+  height: 1rem;
+  width: 60%;
+}
+
+/* --- Хедер Активности --- */
+.activity-header-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-light);
+}
+
+/* --- Боковые кнопки (Side Buttons) --- */
+.activity-side-buttons {
+  /* Задаем переменные по умолчанию, чтобы не было ошибок если класс не применится */
+  --btn-size: 47px;
+  --btn-border-width: 2px;
+  --btn-border-color: #8E9093;
+  --btn-bg: #FFFFFF;
+  --top-pos: 50%;
+  --offset: 5px;
+  --gap: 15px;
+}
+
+.activity-side-buttons.left {
+  --top-pos: 53%;
+}
+
+.activity-side-buttons.right {
+  --top-pos: 55%;
+}
+
+.page-side-buttons.left .page-side-button {
+  width: var(--btn-size);
+  height: var(--btn-size);
+  border: var(--btn-border-width) solid var(--btn-border-color);
+  background: var(--btn-bg);
+  left: var(--offset);
+}
+
+.page-side-buttons.right .page-side-button {
+  width: var(--btn-size);
+  height: var(--btn-size);
+  border: var(--btn-border-width) solid var(--btn-border-color);
+  background: var(--btn-bg);
+  right: var(--offset);
+}
+
+/* --- Контейнер ленты (Feed Wrapper) --- */
+.activity-feed-wrapper {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+}
+
+.activity-compact .activity-feed-wrapper {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
