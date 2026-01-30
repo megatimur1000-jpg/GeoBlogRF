@@ -723,8 +723,7 @@ const MarkerPopup: React.FC<MarkerPopupProps> = React.memo(({ marker, onClose, o
                     // Закрываем форму выбора категории, но оставляем попап открытым
                     setShowCategorySelection(false);
                   }}
-                  className="modal-btn modal-btn-primary"
-                  style={{ background: 'var(--state-success)', borderColor: 'var(--state-success)' }}
+                  className="modal-btn modal-btn-success"
                 >
                   Добавить
                 </button>

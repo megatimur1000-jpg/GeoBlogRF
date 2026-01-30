@@ -24,10 +24,10 @@
 
 @keyframes glowing {
   from {
-    box-shadow: 0 0 12px 2px #ff9800, 0 0 20px 4px rgba(255, 152, 0, 0.3);
+    box-shadow: 0 0 12px 2px var(--state-favorite), 0 0 20px 4px rgba(255, 152, 0, 0.3);
   }
   to {
-    box-shadow: 0 0 16px 3px #ff9800, 0 0 30px 6px rgba(255, 152, 0, 0.5);
+    box-shadow: 0 0 16px 3px var(--state-favorite), 0 0 30px 6px rgba(255, 152, 0, 0.5);
   }
 }
 
@@ -151,23 +151,23 @@
 .marker-used-in-blogs.marker-user-modified,
 .route-used-in-blogs.route-user-modified,
 .event-used-in-blogs.event-user-modified {
-  border: 2px solid #ffd700 !important;
-  box-shadow: 0 0 12px 2px #ffd700, 0 0 20px 4px rgba(255, 215, 0, 0.3) !important;
+  border: 2px solid var(--state-used-in-blog) !important; /* Было #ffd700 */
+  box-shadow: 0 0 12px 2px var(--state-used-in-blog), 0 0 20px 4px rgba(255, 215, 0, 0.3) !important;
   animation: goldGlowing 2.5s ease-in-out infinite alternate !important;
 }
 
 .marker-used-in-blogs.marker-favorite,
 .route-used-in-blogs.route-favorite,
 .event-used-in-blogs.event-favorite {
-  border: 2px solid #ffd700 !important;
-  box-shadow: 0 0 12px 2px #ffd700, 0 0 20px 4px rgba(255, 215, 0, 0.3) !important;
+  border: 2px solid var(--state-used-in-blog) !important; /* Было #ffd700 */
+  box-shadow: 0 0 12px 2px var(--state-used-in-blog), 0 0 20px 4px rgba(255, 215, 0, 0.3) !important;
   animation: goldGlowing 2.5s ease-in-out infinite alternate !important;
 }
 
 .marker-user-modified.marker-favorite,
 .route-user-modified.route-favorite,
 .event-user-modified.event-favorite {
-  border: 2px solid #ff9800 !important;
-  box-shadow: 0 0 12px 2px #ff9800, 0 0 20px 4px rgba(255, 152, 0, 0.3) !important;
+  border: 2px solid var(--state-favorite) !important; /* Было #ff9800 */
+  box-shadow: 0 0 12px 2px var(--state-favorite), 0 0 20px 4px rgba(255, 152, 0, 0.3) !important;
   animation: favoriteGlowing 2s ease-in-out infinite alternate !important;
 } 
