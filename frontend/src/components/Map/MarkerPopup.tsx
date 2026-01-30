@@ -652,17 +652,17 @@ const MarkerPopup: React.FC<MarkerPopupProps> = React.memo(({ marker, onClose, o
                       }}
                     >
                       {isOwner ? (
-                        <button style={menuBtnStyle} onClick={e => { e.stopPropagation(); setSettingsOpen(false); setEditModalOpen(true); }}>
+                        <button className="settings-menu-btn" onClick={e => { e.stopPropagation(); setSettingsOpen(false); setEditModalOpen(true); }}>
                           <i className="fas fa-edit" style={{ marginRight: 8 }} /> Изменить
                         </button>
                       ) : (
-                        <button style={menuBtnStyle} onClick={e => { e.stopPropagation(); setSettingsOpen(false); setShowSuggestInfo(true); }}>
+                        <button className="settings-menu-btn" onClick={e => { e.stopPropagation(); setSettingsOpen(false); setShowSuggestInfo(true); }}>
                           <i className="fas fa-edit" style={{ marginRight: 8 }} /> Изменить
                         </button>
-                      )}
-                      <button style={menuBtnStyle} onClick={e => { e.stopPropagation(); setSettingsOpen(false); setSuggestModalOpen(true); }}>
+                      )} 
+                      <button className="settings-menu-btn" onClick={e => { e.stopPropagation(); setSettingsOpen(false); setSuggestModalOpen(true); }}>
                         <i className="fas fa-paper-plane" style={{ marginRight: 8 }} /> На модерацию
-                      </button>
+                      </button> 
                       <div style={{ width: '100%', marginTop: '4px' }}>
                         <ReportButton
                           contentId={marker.id}
@@ -825,19 +825,6 @@ const MarkerPopup: React.FC<MarkerPopupProps> = React.memo(({ marker, onClose, o
   );
 });
 
-const menuBtnStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'none',
-  border: 'none',
-  textAlign: 'left',
-  padding: '10px 16px',
-  fontSize: '1em',
-  color: '#333',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  transition: 'background 0.15s',
-};
+
 
 export default MarkerPopup;

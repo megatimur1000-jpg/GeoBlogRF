@@ -229,3 +229,22 @@
 .modal-btn-primary { background: #8e44ad; color: #fff; border: 1px solid #8e44ad; }
 .modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .modal-status { margin-top: 10px; }
+/* --- Settings Menu Button --- */
+.settings-menu-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 1rem;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.settings-menu-btn:hover {
+  background: rgba(0,0,0,0.03);
+}
