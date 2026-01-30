@@ -611,15 +611,15 @@ const PostsPage: React.FC = () => {
       <div className="page-main-area">
         <div className="page-content-wrapper">
           <div className="page-main-panel relative">
-            {/* СТАТИЧНЫЙ ЗАГОЛОВОК - не скроллится */}
+            {/* СТАТИЧНЫЙ ЗАГОЛОВОК */}
             <div className="posts-static-header">
-              <div className="flex items-center justify-center relative mb-4">
-                <h1 className="text-2xl font-bold text-gray-900 text-center">Лента контента</h1>
+              <div className="posts-title-row">
+                <h1 className="posts-main-title">Лента контента</h1>
                 {/* Кнопка закрытия панели - только в двухоконном режиме */}
                 {isTwoPanelMode && (
                   <button
                     onClick={handleClosePanel}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-full bg-gray-200/80 hover:bg-gray-300/90 text-gray-600 hover:text-gray-800 transition-all duration-200 backdrop-blur-sm"
+                    className="posts-close-panel-btn"
                     title="Закрыть панель постов"
                   >
                     <FaTimes className="w-4 h-4" />
@@ -627,40 +627,30 @@ const PostsPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Фильтры по типу контента и кнопка создания */}
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <div className="flex gap-2">
+              {/* Фильтры и кнопки */}
+              <div className="posts-controls-row">
+                <div className="posts-filter-group">
                   <button
                     onClick={() => setContentFilter('all')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${contentFilter === 'all'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-white/60 text-gray-700 hover:bg-white/80 backdrop-blur-sm'
-                      }`}
+                    className={`filter-btn ${contentFilter === 'all' ? 'active blue' : ''}`}
                   >
                     Вся лента
                   </button>
                   <button
                     onClick={() => setContentFilter('post')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${contentFilter === 'post'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-white/60 text-gray-700 hover:bg-white/80 backdrop-blur-sm'
-                      }`}
+                    className={`filter-btn ${contentFilter === 'post' ? 'active blue' : ''}`}
                   >
                     Посты
                   </button>
                   <button
                     onClick={() => setContentFilter('guide')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${contentFilter === 'guide'
-                        ? 'bg-orange-600 text-white shadow-md'
-                        : 'bg-white/60 text-gray-700 hover:bg-white/80 backdrop-blur-sm'
-                      }`}
+                    className={`filter-btn ${contentFilter === 'guide' ? 'active orange' : ''}`}
                   >
                     Путеводители
                   </button>
                 </div>
 
-                {/* Кнопки создания поста и черновиков */}
-                <div className="flex items-center gap-2">
+                <div className="posts-action-group">
                   {draftsCount > 0 && (
                     <button
                       onClick={() => setShowDraftsPanel(true)}
@@ -676,7 +666,7 @@ const PostsPage: React.FC = () => {
                   )}
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105 active:scale-95"
+                    className="btn-create-post"
                     title="Создать новый пост"
                   >
                     <FaPlus className="w-4 h-4" />
@@ -692,11 +682,11 @@ const PostsPage: React.FC = () => {
                 {/* Список постов */}
                 <div className="space-y-4">
                   {loading ? (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 mx-auto mb-4 bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center">
-                        <FaFileAlt className="w-8 h-8 text-gray-500 animate-pulse" />
+                    <div className="posts-state-view">
+                      <div className="posts-state-icon-wrapper">
+                        <FaFileAlt className="posts-state-icon animate-pulse" />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Загрузка постов...</h3>
+                      <h3 className="posts-state-title">Загрузка постов...</h3>
                     </div>
                   ) : posts.length > 0 ? (
                     posts.map((post) => (

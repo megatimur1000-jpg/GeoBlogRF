@@ -622,3 +622,156 @@
   border-left: none;
   border-right: none;
 }
+
+/* --- Posts Page Header & Filters --- */
+
+.posts-header {
+  /* Обертка статического хедера */
+}
+
+.posts-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 1rem; /* mb-4 */
+}
+
+.posts-main-title {
+  font-size: 1.5rem; /* text-2xl */
+  font-weight: 700; /* font-bold */
+  color: #111827; /* gray-900 */
+  text-align: center;
+}
+
+/* Кнопка закрытия панели (крестик) */
+.posts-close-panel-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.5rem;
+  border-radius: 9999px;
+  background: rgba(229, 231, 235, 0.8); /* gray-200/80 */
+  color: #4b5563; /* gray-600 */
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.posts-close-panel-btn:hover {
+  background: rgba(209, 213, 219, 0.9); /* gray-300/90 */
+  color: #1f2937; /* gray-800 */
+}
+
+/* Ряд фильтров и кнопок */
+.posts-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem; /* gap-3 */
+}
+
+/* Группа кнопок фильтра */
+.posts-filter-group {
+  display: flex;
+  gap: 0.5rem; /* gap-2 */
+}
+
+/* Кнопка фильтра */
+.filter-btn {
+  padding: 0.5rem 1rem; /* px-4 py-2 */
+  border-radius: 0.5rem; /* rounded-lg */
+  font-weight: 500; /* font-medium */
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.filter-btn.active {
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* shadow-md */
+}
+
+/* Варианты активных цветов */
+.filter-btn.active.blue { background-color: #2563eb; } /* blue-600 */
+.filter-btn.active.orange { background-color: #ea580c; } /* orange-600 */
+
+/* Состояние по умолчанию */
+.filter-btn:not(.active) {
+  background-color: rgba(255, 255, 255, 0.6); /* white/60 */
+  color: #374151; /* gray-700 */
+  backdrop-filter: blur(4px);
+}
+
+.filter-btn:not(.active):hover {
+  background-color: rgba(255, 255, 255, 0.8); /* white/80 */
+}
+
+/* Группа кнопок действий (Создать/Черновики) */
+.posts-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Кнопка "Создать пост" */
+.btn-create-post {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem; /* py-2.5 px-5 */
+  background: linear-gradient(to right, #2563eb, #1d4ed8); /* blue-600 to blue-700 */
+  color: white;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-create-post:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(to right, #1d4ed8, #1e40af); /* blue-700 to blue-800 */
+  transform: scale(1.02);
+}
+
+.btn-create-post:active {
+  transform: scale(0.95);
+}
+
+/* --- Loading & Empty States --- */
+
+.posts-state-view {
+  text-align: center;
+  padding: 3rem 0; /* py-12 */
+}
+
+.posts-state-icon-wrapper {
+  width: 4rem; /* 16 */
+  height: 4rem;
+  margin: 0 auto 1rem; /* mx-auto mb-4 */
+  background-color: rgba(255, 255, 255, 0.4); /* white/40 */
+  backdrop-filter: blur(4px);
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.posts-state-icon {
+  width: 2rem; /* 8 */
+  height: 2rem;
+  color: #6b7280; /* gray-500 */
+}
+
+.posts-state-title {
+  font-size: 1.125rem; /* lg */
+  font-weight: 500; /* medium */
+  color: #111827; /* gray-900 */
+  margin-bottom: 0.5rem; /* mb-2 */
+}
+
+.posts-state-subtitle {
+  color: #4b5563; /* gray-600 */
+}
