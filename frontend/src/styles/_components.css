@@ -567,6 +567,11 @@
   color: var(--text-secondary);
 }
 
+/* Добавлено: текст для плашки статуса */
+.activity-status-text {
+  color: var(--text-accent);
+}
+
 /* --- Боковые кнопки (Side Buttons) --- */
 .activity-side-buttons {
   /* Задаем переменные по умолчанию, чтобы не было ошибок если класс не применится */

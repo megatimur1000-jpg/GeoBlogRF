@@ -24,7 +24,7 @@ const ActivityHeader = React.memo(() => {
           <h1 className="text-lg font-semibold activity-title">Лента активности</h1>        </div>        {/* Статус активности - стабилизирован */}
         <div className="activity-header-status">
           <span className="text-lg">⚡</span>
-          <span className="text-sm font-medium" style={{ color: 'var(--text-accent)' }}>Активный участник</span>
+          <span className="text-sm font-medium activity-status-text">Активный участник</span>
         </div>
       </div>
       
