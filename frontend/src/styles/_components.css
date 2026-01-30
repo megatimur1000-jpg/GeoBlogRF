@@ -52,3 +52,53 @@
   border-color: var(--glass-border-active);
   box-shadow: var(--glass-shadow-active);
 }
+
+/* --- Map Specific Overlays --- */
+
+/* Стили для панели культурной информации (Culture Info Panel) */
+.glass-panel-culture {
+  padding: 8px 12px;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(232, 245, 232, 0.9), rgba(240, 248, 240, 0.9));
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border: 1px solid rgba(195, 230, 195, 0.5);
+  border-radius: 12px;
+  color: #2d5a2d;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.glass-panel-culture-header {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Контейнер для оверлея загрузки (Discovering Place) */
+.map-overlay-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: var(--glass-bg-modal);
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 200px;
+  border: 1px solid var(--glass-border);
+}
+
+/* Фиксированные размеры для попапов (вместо инлайнов в Map.tsx) */
+.popup-card-fixed {
+  width: 205px;
+  height: 285px;
+}

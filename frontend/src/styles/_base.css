@@ -51,6 +51,9 @@
   --glass-blur-strong: blur(20px);
   --glass-border-modal: rgba(255, 255, 255, 0.5);
   
+  /* Стекло (Темные оверлеи / Сообщения) */
+  --glass-bg-dark: rgba(0, 0, 0, 0.75);
+  
   /* --- Radii --- */
   --radius-sm: 8px;
   --radius-md: 12px;

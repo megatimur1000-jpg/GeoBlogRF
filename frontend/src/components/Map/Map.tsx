@@ -58,7 +58,7 @@ const MapMessage = styled.div`
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: var(--glass-bg-dark);
   color: white;
   padding: 15px 25px;
   border-radius: 8px;
@@ -1434,9 +1434,8 @@ const Map: React.FC<MapProps> = ({
                     top: markerPosition.y,
                     transform: 'translate(-50%, -100%)',
                     zIndex: 1300,
-                    width: '205px',
-                    height: '285px',
                 }}
+                className="popup-card-fixed"
             >
                 <MarkerPopup
                     marker={marker}
@@ -1578,19 +1577,8 @@ const Map: React.FC<MapProps> = ({
                             showCloseButton={false}
                             className="culture-info-glass"
                         >
-                            <div style={{
-                                padding: '8px 12px',
-                                textAlign: 'center',
-                                background: 'linear-gradient(135deg, rgba(232, 245, 232, 0.9), rgba(240, 248, 240, 0.9))',
-                                backdropFilter: 'blur(10px) saturate(180%)',
-                                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
-                                border: '1px solid rgba(195, 230, 195, 0.5)',
-                                borderRadius: '12px',
-                                color: '#2d5a2d',
-                                fontSize: '11px',
-                                lineHeight: '1.4',
-                            }}>
-                                <div style={{ fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <div className="glass-panel-culture">
+                                <div className="glass-panel-culture-header">
                                     🎯 Культура меток
                                 </div>
                                 <div style={{ opacity: 0.9 }}>
@@ -1638,22 +1626,7 @@ const Map: React.FC<MapProps> = ({
                 {mapMessage && <MapMessage>{mapMessage}</MapMessage>}
 
                 {isDiscoveringPlace && (
-                    <div style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 1000,
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '16px',
-                        minWidth: '200px'
-                    }}>
+                    <div className="map-overlay-loading">
                         <div style={{
                             width: '40px',
                             height: '40px',
@@ -1667,7 +1640,7 @@ const Map: React.FC<MapProps> = ({
                         </div>
                         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                     </div>
-                )}
+                )} 
             </MapWrapper>
 
             {isLoading && (
