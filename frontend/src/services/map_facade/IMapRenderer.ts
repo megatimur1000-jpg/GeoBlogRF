@@ -205,26 +205,11 @@ export interface IMapRenderer {
   getMap?(): unknown;
 
   // --- Доп. утилиты (опциональные) для упрощения работы компонентов через фасад ---
+  // Только общие методы, не завязанные на конкретной реализации карты
   addTileLayer?(url: string, options?: any): any;
-  setZoomControl?(position?: string): any;
-  createDivIcon?(opts?: any): any;
-  createIcon?(opts?: any): any;
-  createMarker?(latlng: any, opts?: any): any;
-  point?(x: number, y: number): any;
-  latLng?(lat: number, lon: number): any;
-  createPolyline?(latlngs: Array<[number, number]>, opts?: any): any;
-  latLngBounds?(points: any): any;
-  createPolygon?(latlngs: Array<[number, number]>, opts?: any): any;
-  createCircle?(center: [number, number], opts?: any): any;
-  fitBounds?(bounds: any, opts?: any): void;
-  createMarkerClusterGroup?(opts?: any): any;
-  latLngToContainerPoint?(latlng: any): { x: number; y: number };
-
-
-
 
   // Обработка событий
-  onClick?(handler: (latLng: LatLng) => void): void;
+  onMapClick?(handler: (event: any) => void): void;
   onMapMove?(handler: () => void): void;
   onMapZoom?(handler: () => void): void;
 }

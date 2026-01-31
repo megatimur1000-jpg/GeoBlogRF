@@ -13,12 +13,14 @@ import CircularProgressBar from '../ui/CircularProgressBar';
 // Объявляем L как глобальную переменную (устанавливается в leafletInit.ts)
 declare const L: any;
 
+// Хук для рендеринга маркеров (кластеризация, события, попапы)
+import { useMapMarkers } from './useMapMarkers.tsx';
+
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useMapStyle } from '../../hooks/useMapStyle';
 import { MapContainer, MapWrapper, LoadingOverlay, ErrorMessage, GlobalLeafletPopupStyles } from './Map.styles';
-import { createRoot } from 'react-dom/client';
-import type { Root } from 'react-dom/client';
+
 import { createPortal } from 'react-dom';
 import MarkerPopup from './MarkerPopup';
 import { MarkerData } from '../../types/marker';
@@ -116,12 +118,13 @@ interface MapProps {
     } | null;
 }
 
-const Map: React.FC<MapProps> = ({
-    center, zoom, markers, onMapClick, onHashtagClickFromPopup,
-    flyToCoordinates, selectedMarkerIdForPopup, setSelectedMarkerIdForPopup, onAddToFavorites, onAddToBlog, isFavorite,
-    onFavoritesClick, favoritesCount, mapSettings, filters, searchRadiusCenter, onSearchRadiusCenterChange, selectedMarkerIds, onBoundsChange, zones = [], routeData, isAddingMarkerMode: externalIsAddingMarkerMode, onAddMarkerModeChange, legendOpen: externalLegendOpen, onLegendOpenChange,
-    onRemoveFromFavorites, setSelectedMarkerIds
-}) => {
+function Map(props: MapProps) {
+    const {
+        center, zoom, markers, onMapClick, onHashtagClickFromPopup,
+        flyToCoordinates, selectedMarkerIdForPopup, setSelectedMarkerIdForPopup, onAddToFavorites, onAddToBlog, isFavorite,
+        onFavoritesClick, favoritesCount, mapSettings, filters, searchRadiusCenter, onSearchRadiusCenterChange, selectedMarkerIds, onBoundsChange, zones = [], routeData, isAddingMarkerMode: externalIsAddingMarkerMode, onAddMarkerModeChange, legendOpen: externalLegendOpen, onLegendOpenChange,
+        onRemoveFromFavorites, setSelectedMarkerIds
+    } = props;
 
     // --- СОСТОЯНИЕ ДЛЯ МАРКЕРОВ ---
     const [localMarkers, setLocalMarkers] = useState<MarkerData[]>([]);
@@ -148,7 +151,7 @@ const Map: React.FC<MapProps> = ({
     // Use `any` for internal Leaflet instances to avoid direct Leaflet types in components
     const mapRef = useRef<any | null>(null);
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
-    const activePopupRoots = useRef<Record<string, Root>>({});
+
     const tempMarkerRef = useRef<any | null>(null);
     const markerClusterGroupRef = useRef<any | null>(null);
     const tileLayerRef = useRef<any | null>(null);
@@ -426,6 +429,9 @@ const Map: React.FC<MapProps> = ({
                 element.offsetWidth > 0 && element.offsetHeight > 0;
         };
 
+        // Will collect cleanup callbacks registered during init
+        let registeredHandlers: Array<() => void> = [];
+
         const initMapAndLoadMarkers = async () => {
             setIsLoading(true);
             setError(null);
@@ -503,16 +509,11 @@ const Map: React.FC<MapProps> = ({
                                 } else {
                     // FACADE: Используем OSMMapRenderer вместо прямого вызова L.map
                     try {
-                         // ИСПРАВЛЕНИЕ 1: Конструктор без аргументов
-                        const mapRenderer = new OSMMapRenderer();
-
-                        // ИСПРАВЛЕНИЕ 2: Передаём id контейнера 'map' в initialize
-                        await mapRenderer.init('map', config);
-
-                        // Получаем инстанс карты Leaflet из фасада для совместимости с остальным кодом
-                        mapRef.current = mapRenderer.getMap();
+                        // Используем фасад для инициализации карты как последний вариант
+                        await mapFacade().initialize(mapContainer, { ...config, preserveState: true });
+                        mapRef.current = mapFacade().getMap?.();
                     } catch (e) {
-                        console.error("Ошибка инициализации OSMMapRenderer", e);
+                        console.error("Ошибка инициализации карты через фасад", e);
                     }
                 }
 
@@ -571,9 +572,12 @@ const Map: React.FC<MapProps> = ({
                     }
                 });
 
-                mapRef.current?.on('moveend', () => {
-                    if (onBoundsChange && mapRef.current) {
-                        const bounds = mapRef.current.getBounds();
+                // Подписываемся на событие завершения перемещения через фасад
+                const boundsHandler = () => {
+                    try {
+                        const mapInstance = mapFacade().getMap?.() ?? mapRef.current;
+                        if (!mapInstance || !onBoundsChange) return;
+                        const bounds = mapInstance.getBounds();
                         if (bounds && typeof bounds.getNorth === 'function') {
                             onBoundsChange({
                                 north: bounds.getNorth(),
@@ -582,51 +586,69 @@ const Map: React.FC<MapProps> = ({
                                 west: bounds.getWest()
                             });
                         }
+                    } catch (err) {
+                        console.debug('[Map] boundsHandler error:', err);
                     }
-                });
+                };
 
-                mapRef.current?.on('click', async (e: any) => {
-                    if (!mapRef.current) return; // Guard to avoid crashes if map is gone
-                    if (isAddingMarkerModeRef.current) {
-                        if (tempMarkerRef.current) {
-                            try { mapRef.current.removeLayer(tempMarkerRef.current); } catch (err) { }
+                mapFacade().onMapMove(boundsHandler);
+
+                // Подписываемся на клик карты через фасад
+                const handleMapClick = async (e: any) => {
+                    try {
+                        if (!mapRef.current) return; // Guard to avoid crashes if map is gone
+                        if (isAddingMarkerModeRef.current) {
+                            if (tempMarkerRef.current) {
+                                try { mapRef.current.removeLayer(tempMarkerRef.current); } catch (err) { }
+                            }
+
+                            const clickedLatLng = e.latlng;
+                            const zoom = mapRef.current.getZoom();
+                            const mapSize = mapRef.current.getSize();
+                            const targetScreenY = mapSize.y * 0.25;
+                            const screenCenterY = mapSize.y / 2;
+                            const offsetY = targetScreenY - screenCenterY;
+                            const projectedClick = mapRef.current.project(clickedLatLng, zoom);
+                            const targetCenterPoint = mapFacade().point(projectedClick.x, projectedClick.y - offsetY);
+                            const targetCenterLatLng = mapRef.current.unproject(targetCenterPoint, zoom);
+                            try { mapRef.current.setView(targetCenterLatLng, zoom, { animate: true }); } catch (err) { }
+
+                            const tempIcon = mapFacade().createDivIcon({
+                                className: 'temp-marker-icon',
+                                html: '<div style="background-color: red; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 3000;"></div>',
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10],
+                            });
+
+                            const newTempMarker = mapFacade().createMarker([clickedLatLng.lat, clickedLatLng.lng], { icon: tempIcon });
+                            setTempMarker(newTempMarker);
+
+                            const placeFound = await handlePlaceDiscovery(clickedLatLng.lat, clickedLatLng.lng);
+                            setCoordsForNewMarker([clickedLatLng.lat, clickedLatLng.lng]);
+
+                            if (!placeFound) {
+                                setMapMessage('ℹ️ Место не найдено, можно добавить вручную');
+                                setTimeout(() => setMapMessage(null), 3000);
+                            }
+
+                            setIsAddingMarkerMode(false);
+                            setMapMessage(null);
+                        } else if (onMapClick) {
+                            onMapClick([e.latlng.lat, e.latlng.lng]);
                         }
-
-                        const clickedLatLng = e.latlng;
-                        const zoom = mapRef.current.getZoom();
-                        const mapSize = mapRef.current.getSize();
-                        const targetScreenY = mapSize.y * 0.25;
-                        const screenCenterY = mapSize.y / 2;
-                        const offsetY = targetScreenY - screenCenterY;
-                        const projectedClick = mapRef.current.project(clickedLatLng, zoom);
-                        const targetCenterPoint = mapFacade().point(projectedClick.x, projectedClick.y - offsetY);
-                        const targetCenterLatLng = mapRef.current.unproject(targetCenterPoint, zoom);
-                        try { mapRef.current.setView(targetCenterLatLng, zoom, { animate: true }); } catch (err) { }
-
-                        const tempIcon = mapFacade().createDivIcon({
-                            className: 'temp-marker-icon',
-                            html: '<div style="background-color: red; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 3000;"></div>',
-                            iconSize: [20, 20],
-                            iconAnchor: [10, 10],
-                        });
-
-                        const newTempMarker = mapFacade().createMarker([clickedLatLng.lat, clickedLatLng.lng], { icon: tempIcon });
-                        setTempMarker(newTempMarker);
-
-                        const placeFound = await handlePlaceDiscovery(clickedLatLng.lat, clickedLatLng.lng);
-                        setCoordsForNewMarker([clickedLatLng.lat, clickedLatLng.lng]);
-
-                        if (!placeFound) {
-                            setMapMessage('ℹ️ Место не найдено, можно добавить вручную');
-                            setTimeout(() => setMapMessage(null), 3000);
-                        }
-
-                        setIsAddingMarkerMode(false);
-                        setMapMessage(null);
-                    } else if (onMapClick) {
-                        onMapClick([e.latlng.lat, e.latlng.lng]);
+                    } catch (err) {
+                        console.debug('[Map] handleMapClick error:', err);
                     }
-                });
+                };
+
+                mapFacade().onMapClick(handleMapClick);
+
+                // Сохраняем функции для последующего удаления при unmount
+                registeredHandlers.push(() => mapFacade().offMapMove(boundsHandler));
+                registeredHandlers.push(() => mapFacade().offMapClick(handleMapClick));
+
+                // Attach to local cleanup via closure: ensure we remove handlers when component unmounts
+                // We'll call these in the main effect cleanup below (see return).
 
                 setIsLoading(false);
                 setIsMapReady(true);
@@ -659,16 +681,20 @@ const Map: React.FC<MapProps> = ({
 
         return () => {
             if (mapRef.current) {
-                Object.values(activePopupRoots.current).forEach((root) => {
-                    try { root.unmount(); } catch (err) { }
-                });
-                activePopupRoots.current = {};
-
                 if (tempMarkerRef.current) {
                     try { mapRef.current.removeLayer(tempMarkerRef.current); } catch (e) { }
                     tempMarkerRef.current = null;
                 }
             }
+
+            // Call any registered facade handler removers
+            try {
+                if (registeredHandlers && Array.isArray(registeredHandlers)) {
+                    registeredHandlers.forEach(fn => {
+                        try { fn(); } catch (e) { }
+                    });
+                }
+            } catch (e) { }
         };
     }, [leftContent, center, zoom, mapSettings.mapType, onBoundsChange, onMapClick]);
 
@@ -686,14 +712,15 @@ const Map: React.FC<MapProps> = ({
             } catch (e) { }
         };
 
-        map.on('moveend', saveState);
-        map.on('zoomend', saveState);
+        // Register saveState via facade (moveend/zoomend semantics are implemented in renderer)
+        mapFacade().onMapMove(saveState);
+        mapFacade().onMapZoom(saveState);
         saveState();
 
         return () => {
             try {
-                map.off('moveend', saveState);
-                map.off('zoomend', saveState);
+                mapFacade().offMapMove(saveState);
+                mapFacade().offMapZoom(saveState);
             } catch (e) { }
         };
     }, [isMapReady]);
@@ -742,316 +769,46 @@ const Map: React.FC<MapProps> = ({
         }
     }, [mapSettings.showTraffic, mapSettings.showBikeLanes]);
 
-    // --- MARKERS RENDER ---
-    useEffect(() => {
-        if (!mapRef.current || !L) return;
-        if (!markersData || markersData.length === 0) return;
+    // --- MARKERS RENDER (moved to hook) ---
+    useMapMarkers({
+      mapRef,
+      markerClusterGroupRef,
+      tileLayerRef,
+      markersData,
+      isDarkMode,
+      filters,
+      searchRadiusCenter,
+      mapSettings,
+      openEvents,
+      selectedEvent,
+      leftContent,
+      rightContent,
+      isMapReady,
+      setMiniPopup,
+      setEventMiniPopup,
+      setSelectedMarkerIdForPopup,
+      setSelectedMarkerIds,
+      isFavorite,
+      onHashtagClickFromPopup,
+      onAddToFavorites,
+      onRemoveFromFavorites,
+      onAddToBlog
+    });
 
-        const { radiusOn, radius } = filters;
-        const { themeColor, showHints } = mapSettings;
-        const [searchRadiusCenterLat, searchRadiusCenterLng] = searchRadiusCenter;
 
-        if (markerClusterGroupRef.current) {
-            mapRef.current.removeLayer(markerClusterGroupRef.current);
-            markerClusterGroupRef.current = null;
-        }
 
-        mapRef.current.eachLayer((layer: any) => {
-            // Avoid direct instanceof checks; remove layers that look like markers and aren't the temp marker
-            if (layer && (layer as any).markerData && layer !== tempMarkerRef.current) {
-                try { mapRef.current?.removeLayer(layer); } catch (e) { }
-            }
-        });
 
-        // Create a marker cluster group via the facade (keeps Leaflet usage centralized)
-        if (!mapFacade().createMarkerClusterGroup) return;
 
-        const markerClusterGroup = mapFacade().createMarkerClusterGroup({
-            showCoverageOnHover: false,
-            maxClusterRadius: 50,
-            spiderfyOnMaxZoom: true,
-            animate: true,
-            iconCreateFunction: function (cluster: any) {
-                const count = cluster.getChildCount();
-                return mapFacade().createDivIcon({
-                    html: `<div class="marker-cluster"><span>${count}</span></div>`,
-                    className: 'marker-cluster-custom',
-                    iconSize: [40, 40]
-                });
-            }
-        });
 
-        markersData.forEach((markerData) => {
-            const lat = parseFloat(markerData.latitude as any);
-            const lng = parseFloat(markerData.longitude as any);
 
-            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                const markerCategory = markerData.category || 'other';
-                const isHot = (markerData.rating || 0) >= 4.5;
-                const isPending = markerData.status === 'pending' || (markerData as any).is_pending || false;
 
-                const isInRadius = radiusOn
-                    ? getDistanceFromLatLonInKm(searchRadiusCenterLat, searchRadiusCenterLng, markerData.latitude, markerData.longitude) <= radius
-                    : false;
 
-                const [iconWidth, iconHeight] = isInRadius ? [44, 58] : [34, 44];
-                const markerIconUrl = getMarkerIconPath(markerCategory);
-                const markerCategoryStyle = markerCategoryStyles[markerCategory] || markerCategoryStyles.default;
-                const iconColor = isPending ? '#ff9800' : (isInRadius ? themeColor : (getCategoryColor(markerCategory) || markerCategoryStyle.color));
-                const faIconName = getFontAwesomeIconName(markerCategory);
 
-                const customIcon = mapFacade().createIcon({
-                    iconUrl: markerIconUrl,
-                    iconSize: [iconWidth, iconHeight],
-                    iconAnchor: [iconWidth / 2, iconHeight],
-                    popupAnchor: [0, -iconHeight],
-                    className: `marker-category-${markerCategory}${isHot ? ' marker-hot' : ''}${markerCategory === 'user_poi' ? ' marker-user-poi' : ''}${isPending ? ' marker-pending' : ''}`,
-                });
 
-                const leafletMarker = mapFacade().createMarker([lat, lng], { icon: customIcon });
 
-                const img = new Image();
-                img.onerror = () => {
-                    const divIcon = mapFacade().createDivIcon({
-                        className: `marker-icon marker-category-${markerCategory}${isHot ? ' marker-hot' : ''}`,
-                        html: `<div class="marker-base" style="background-color: ${iconColor};"><i class="fas ${faIconName}"></i></div>`,
-                        iconSize: [iconWidth, iconHeight],
-                        iconAnchor: [iconWidth / 2, iconHeight],
-                    });
-                    leafletMarker.setIcon(divIcon);
-                };
-                img.src = markerIconUrl;
-                (leafletMarker as any).markerData = markerData;
 
-                const popupOptions = {
-                    className: `custom-marker-popup ${isDarkMode ? 'dark' : 'light'}`,
-                    autoPan: true,
-                    autoPanPadding: [50, 50],
-                    closeButton: false,
-                    maxWidth: 441,
-                    maxHeight: 312,
-                    offset: mapFacade().point(0, -10),
-                };
 
-                leafletMarker.bindPopup('', popupOptions);
 
-                leafletMarker.on('popupopen', (e: any) => {
-                    try {
-                        if (!mapRef.current) {
-                            setTimeout(() => {
-                                if (leafletMarker.getPopup() && leafletMarker.isPopupOpen()) {
-                                    leafletMarker.openPopup();
-                                }
-                            }, 100);
-                            return;
-                        }
-
-                        let hasTileLayer = false;
-                        mapRef.current.eachLayer((layer: any) => {
-                            // Avoid instanceof checks; assume presence of _url means a tile layer
-                            if ((layer as any)?._url) hasTileLayer = true;
-                        });
-
-                        if (!hasTileLayer) {
-                            setTimeout(() => {
-                                if (leafletMarker.getPopup() && leafletMarker.isPopupOpen()) {
-                                    leafletMarker.openPopup();
-                                }
-                            }, 200);
-                            return;
-                        }
-
-                        const popupElement = e.popup?.getElement();
-                        if (!popupElement) return;
-
-                        const popupContentDiv = popupElement.querySelector('.leaflet-popup-content');
-                        if (!popupContentDiv || !popupContentDiv.parentElement || !document.body.contains(popupElement)) {
-                            return;
-                        }
-
-                        let root = activePopupRoots.current[markerData.id];
-                        if (!root) {
-                            try {
-                                root = createRoot(popupContentDiv);
-                                activePopupRoots.current[markerData.id] = root;
-                            } catch (err) { return; }
-                        }
-
-                        const fullMarkerData: MarkerData = markerData;
-                        const isSelected = !!(selectedMarkerIdForPopup && selectedMarkerIdForPopup === markerData.id);
-                        const shouldShowSelected = isSelected && isFavorite(markerData) && Array.isArray(selectedMarkerIds) && selectedMarkerIds.includes(markerData.id);
-
-                        if (shouldShowSelected) {
-                            popupElement.classList.add('selected');
-                        } else {
-                            popupElement.classList.remove('selected');
-                        }
-
-                        try {
-                            root.render(
-                                <MarkerPopup
-                                    key={markerData.id}
-                                    marker={fullMarkerData}
-                                    onClose={() => {
-                                        try {
-                                            if (leafletMarker.getPopup()) {
-                                                leafletMarker.closePopup();
-                                            }
-                                        } catch (err) { }
-                                    }}
-                                    onHashtagClick={onHashtagClickFromPopup}
-                                    onMarkerUpdate={() => { }}
-                                    onAddToFavorites={onAddToFavorites}
-                                    onRemoveFromFavorites={onRemoveFromFavorites}
-                                    setSelectedMarkerIds={setSelectedMarkerIds}
-                                    onAddToBlog={onAddToBlog}
-                                    isFavorite={isFavorite(markerData)}
-                                    isSelected={shouldShowSelected}
-                                />
-                            );
-                        } catch (err) {
-                            popupContentDiv.innerHTML = '<div style="padding: 10px;">Ошибка загрузки попапа</div>';
-                        }
-                    } catch (err) { }
-                });
-
-                leafletMarker.on('popupclose', () => {
-                    const root = activePopupRoots.current[markerData.id];
-                    if (root) {
-                        root.unmount();
-                        delete activePopupRoots.current[markerData.id];
-                    }
-                });
-
-                leafletMarker.on('mouseover', () => {
-                    setMiniPopup({
-                        marker: markerData,
-                        position: latLngToContainerPoint(mapFacade(), mapFacade().latLng(Number(markerData.latitude), Number(markerData.longitude)))
-                    });
-                });
-
-                leafletMarker.on('click', (e: any) => {
-                    e.originalEvent.stopPropagation();
-                    setMiniPopup(null);
-                    setSelectedMarkerIdForPopup(markerData.id);
-                });
-
-                if (showHints) {
-                    leafletMarker.bindTooltip(markerData.title, { direction: 'top', offset: [0, -10] });
-                }
-
-                markerClusterGroup.addLayer(leafletMarker);
-            }
-        });
-
-        // Event markers
-        const isEventPanelMode = leftContent && rightContent;
-        const shouldShowEventMarkers = isEventPanelMode && selectedEvent !== null;
-
-        if (shouldShowEventMarkers) {
-            openEvents.forEach((event: MockEvent) => {
-                const lat = event.latitude;
-                const lng = event.longitude;
-
-                if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                    const category = getCategoryById(event.categoryId);
-                    const colorMap: { [key: string]: string } = {
-                        'bg-red-500': '#ef4444', 'bg-orange-500': '#f97316', 'bg-sky-500': '#0ea5e9',
-                        'bg-emerald-500': '#10b981', 'bg-violet-500': '#8b5cf6', 'bg-amber-500': '#f59e0b',
-                        'bg-pink-500': '#ec4899', 'bg-fuchsia-500': '#d946ef', 'bg-indigo-500': '#6366f1',
-                        'bg-lime-500': '#84cc16', 'bg-cyan-500': '#06b6d4', 'bg-yellow-400': '#facc15',
-                        'bg-rose-500': '#f43f5e', 'bg-purple-600': '#9333ea', 'bg-purple-500': '#a855f7',
-                        'bg-orange-400': '#fb923c', 'bg-teal-500': '#14b8a6', 'bg-blue-400': '#60a5fa',
-                        'bg-neutral-800': '#262626'
-                    };
-                    const categoryColor = category?.color ? (colorMap[category.color] || '#6b7280') : '#6b7280';
-
-                    const categoryIconMap: { [key: string]: string } = {
-                        'festival': 'fa-bullhorn', 'concert': 'fa-music', 'exhibition': 'fa-image',
-                        'sport': 'fa-trophy', 'market': 'fa-store', 'holiday': 'fa-gift',
-                        'fishing': 'fa-fish', 'oktoberfest': 'fa-beer', 'parade': 'fa-flag',
-                        'theater': 'fa-theater-masks', 'heritage': 'fa-landmark', 'kids': 'fa-child',
-                        'nightlife': 'fa-moon'
-                    };
-                    const categoryIcon = categoryIconMap[event.categoryId] || 'fa-calendar';
-
-                    const isSelected = selectedEvent?.id === event.id;
-                    const iconSize = isSelected ? 50 : 40;
-
-                    const eventIcon = mapFacade().createDivIcon({
-                        className: `event-marker-icon ${isSelected ? 'event-marker-selected' : ''}`,
-                        html: `<div class="event-marker-base" style="width: ${iconSize}px; height: ${iconSize}px; background-color: ${categoryColor}; border: 2px solid #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); ${isSelected ? 'animation: eventMarkerPulse 2s ease-in-out infinite;' : ''}"><i class="fas ${categoryIcon}" style="color: #ffffff; font-size: ${iconSize * 0.4}px;"></i></div>`,
-                        iconSize: [iconSize, iconSize],
-                        iconAnchor: [iconSize / 2, iconSize],
-                        popupAnchor: [0, -iconSize],
-                    });
-
-                    const eventMarker = mapFacade().createMarker([lat, lng], { icon: eventIcon });
-                    (eventMarker as any).eventData = event;
-
-                    eventMarker.on('click', (e: any) => {
-                        e.originalEvent.stopPropagation();
-                        setSelectedEvent(event);
-                    });
-
-                    eventMarker.on('mouseover', () => {
-                        setEventMiniPopup({
-                            event: event,
-                            position: latLngToContainerPoint(mapFacade(), mapFacade().latLng(lat, lng))
-                        });
-                    });
-
-                    eventMarker.on('click', (e: any) => {
-                        e.originalEvent.stopPropagation();
-                        setEventMiniPopup(null);
-                        setSelectedEvent(event);
-                    });
-
-                    markerClusterGroup.addLayer(eventMarker);
-                }
-            });
-        }
-
-        // Cluster styles
-        const style = document.createElement('style');
-        style.innerHTML = `
-      .marker-cluster-custom { background: ${themeColor} !important; color: #fff !important; border: 2px solid #fff; border-radius: 50% !important; width: 40px !important; height: 40px !important; display: flex !important; align-items: center; justify-content: center; }
-      .marker-cluster-custom span { color: #fff !important; font-size: 1.2em; }
-      .leaflet-popup-content-wrapper, .leaflet-popup-content, .leaflet-popup-tip { border-radius: 8px !important; overflow: hidden !important; }
-      .event-marker-base { transition: transform 0.2s ease; }
-      .event-marker-selected .event-marker-base { transform: scale(1.1); }
-      @keyframes eventMarkerPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-    `;
-        document.head.appendChild(style);
-
-        let hasTileLayer = false;
-        mapRef.current.eachLayer((layer: any) => {
-            // rely on characteristic property instead of instanceof
-            if ((layer as any)?._url) hasTileLayer = true;
-        });
-
-        if (!hasTileLayer) {
-            setTimeout(() => {
-                if (mapRef.current && !markerClusterGroupRef.current) {
-                    markerClusterGroup.addTo(mapRef.current);
-                    markerClusterGroupRef.current = markerClusterGroup;
-                }
-            }, 100);
-        } else {
-            markerClusterGroup.addTo(mapRef.current);
-            markerClusterGroupRef.current = markerClusterGroup;
-        }
-
-        const highPriorityStyle = document.createElement('style');
-        highPriorityStyle.setAttribute('data-high-priority', 'true');
-        highPriorityStyle.innerHTML = `.leaflet-popup-content-wrapper, .leaflet-popup-content, .leaflet-popup-tip { border-radius: 8px !important; overflow: hidden !important; }`;
-        document.head.appendChild(highPriorityStyle);
-
-        return () => {
-            if (style && document.head.contains(style)) document.head.removeChild(style);
-            if (highPriorityStyle && document.head.contains(highPriorityStyle)) document.head.removeChild(highPriorityStyle);
-        };
-    }, [markersData, isDarkMode, filters, searchRadiusCenter, mapSettings, openEvents, selectedEvent, leftContent, rightContent, isMapReady]);
 
     // --- UNIFIED POPUP HANDLER ---
     useEffect(() => {

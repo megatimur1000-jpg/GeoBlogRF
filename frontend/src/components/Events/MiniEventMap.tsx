@@ -1,17 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import * as LeafletModule from 'leaflet';
-const L = (LeafletModule as any).default || (LeafletModule as any);
-import 'leaflet/dist/leaflet.css';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-// Исправляем пути к иконкам для Leaflet
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-});
+import '../../utils/leafletInit';
+// Leaflet инициализирован в leafletInit и доступен как глобальная переменная `L`
+declare const L: any;
 
 interface MiniEventMapProps {
   height?: string;
@@ -33,8 +23,8 @@ const MiniEventMap: React.FC<MiniEventMapProps> = ({
   className = '',
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  const mapInstanceRef = useRef<any | null>(null);
+  const markerRef = useRef<any | null>(null);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;

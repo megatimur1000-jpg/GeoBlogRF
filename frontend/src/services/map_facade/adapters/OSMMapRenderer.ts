@@ -2,55 +2,7 @@ import type { IMapRenderer, MapConfig, UnifiedMarker, PersistedRoute, GeoPoint, 
 import L from 'leaflet';
 
 export class OSMMapRenderer implements IMapRenderer {
-  clear?(): void {
-    throw new Error('Method not implemented.');
-  }
-  removeMarker?(id: string): void {
-    throw new Error('Method not implemented.');
-  }
-  removeRoute?(id: string): void {
-    throw new Error('Method not implemented.');
-  }
-  setZoomControl?(position?: string) {
-    throw new Error('Method not implemented.');
-  }
-  createDivIcon?(opts?: any) {
-    throw new Error('Method not implemented.');
-  }
-  createIcon?(opts?: any) {
-    throw new Error('Method not implemented.');
-  }
-  createMarker?(latlng: any, opts?: any) {
-    throw new Error('Method not implemented.');
-  }
-  point?(x: number, y: number) {
-    throw new Error('Method not implemented.');
-  }
-  latLng?(lat: number, lon: number) {
-    throw new Error('Method not implemented.');
-  }
-  createPolyline?(latlngs: Array<[number, number]>, opts?: any) {
-    throw new Error('Method not implemented.');
-  }
-  latLngBounds?(points: any) {
-    throw new Error('Method not implemented.');
-  }
-  createPolygon?(latlngs: Array<[number, number]>, opts?: any) {
-    throw new Error('Method not implemented.');
-  }
-  createCircle?(center: [number, number], opts?: any) {
-    throw new Error('Method not implemented.');
-  }
-  fitBounds?(bounds: any, opts?: any): void {
-    throw new Error('Method not implemented.');
-  }
-  createMarkerClusterGroup?(opts?: any) {
-    throw new Error('Method not implemented.');
-  }
-  latLngToContainerPoint?(latlng: any): { x: number; y: number; } {
-    throw new Error('Method not implemented.');
-  }
-  private containerId: string | null = null;
+  private containerId: string | null = null; 
   private mapInstance: L.Map | null = null;
   private leafletMarkers: Record<string, L.Marker> = {};
 
@@ -133,19 +85,19 @@ export class OSMMapRenderer implements IMapRenderer {
   }
 
   /**
-   * Подписка на перемещение карты.
+   * Подписка на завершение перемещения карты (moveend вместо move).
    */
   public onMapMove(handler: (e: L.LeafletEvent) => void): void {
     if (!this.mapInstance) return;
-    this.mapInstance.on('move', handler);
+    this.mapInstance.on('moveend', handler);
   }
 
   /**
-   * Подписка на изменение зума.
+   * Подписка на завершение изменения зума (zoomend вместо zoom).
    */
   public onMapZoom(handler: (e: L.LeafletEvent) => void): void {
     if (!this.mapInstance) return;
-    this.mapInstance.on('zoom', handler);
+    this.mapInstance.on('zoomend', handler);
   }
 
   public getMap(): L.Map {

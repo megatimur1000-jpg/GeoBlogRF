@@ -60,7 +60,12 @@ export class MapContextFacade {
   private readonly routeGeometryHandlers: Array<(coords: Array<[number, number]>) => void> = [];
   // Добавлены новые реестры для событий перемещения и зума
   private readonly moveHandlers: Array<() => void> = [];
-  private readonly zoomHandlers: Array<() => void> = []; 
+  private readonly zoomHandlers: Array<() => void> = [];
+
+  // Maps to keep track of wrappers for unsubscribe
+  private readonly clickHandlerMap: Map<(e: any) => void, (coords: [number, number]) => void> = new Map();
+  private readonly moveHandlerMap: Map<() => void, () => void> = new Map();
+  private readonly zoomHandlerMap: Map<() => void, () => void> = new Map(); 
 
   private splitScreenState = {
     left: 'osm' as MapContext | 'calendar',
@@ -230,7 +235,7 @@ export class MapContextFacade {
         });
       }
 
-      // Bind Move handlers
+          // Bind Move handlers
       if (r.onMapMove && this.moveHandlers.length > 0) {
         r.onMapMove(() => {
           this.moveHandlers.forEach(h => {
@@ -513,6 +518,11 @@ export class MapContextFacade {
   // These helpers keep Leaflet usage centralized in the facade so components don't import/use Leaflet directly.
   addTileLayer(url: string, options?: any): any {
     try {
+      // Prefer renderer-provided implementation if available
+      if (this.currentRenderer?.addTileLayer) {
+        return (this.currentRenderer as any).addTileLayer(url, options);
+      }
+
       const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
       const L = (window as any).L;
       if (!map || !L) return null;
@@ -693,6 +703,11 @@ export class MapContextFacade {
     } catch (error_) { console.debug('[MapContextFacade] onClick setup failed:', error_); }
   }
 
+  offClick(handler: (latLng: [number, number]) => void): void {
+    const idx = this.clickHandlers.indexOf(handler);
+    if (idx >= 0) this.clickHandlers.splice(idx, 1);
+  }
+
   onRouteGeometry(handler: (coords: Array<[number, number]>) => void): void {
     this.routeGeometryHandlers.push(handler);
     try {
@@ -709,30 +724,47 @@ export class MapContextFacade {
    * Подписка на событие окончания перемещения карты.
    */
   onMapMove(handler: () => void): void {
-    this.moveHandlers.push(handler);
+    // create wrapper to preserve stable reference for unsubscription
+    const wrapper = () => { try { handler(); } catch (error_) { console.debug('[MapContextFacade] onMapMove handler error:', error_); } };
+    this.moveHandlers.push(wrapper);
+    this.moveHandlerMap.set(handler, wrapper);
     try {
       const r = this.currentRenderer as any;
       if (r?.onMapMove) {
-        r.onMapMove(() => {
-          try { handler(); } catch (error_) { console.debug('[MapContextFacade] onMapMove handler error:', error_); }
-        });
+        r.onMapMove(wrapper);
       }
     } catch (error_) { console.debug('[MapContextFacade] onMapMove setup failed:', error_); }
+  }
+
+  offMapMove(handler: () => void): void {
+    const wrapper = this.moveHandlerMap.get(handler as any);
+    if (!wrapper) return;
+    this.moveHandlerMap.delete(handler as any);
+    const idx = this.moveHandlers.indexOf(wrapper);
+    if (idx >= 0) this.moveHandlers.splice(idx, 1);
   }
 
   /**
    * Подписка на событие изменения зума.
    */
   onMapZoom(handler: () => void): void {
-    this.zoomHandlers.push(handler);
+    const wrapper = () => { try { handler(); } catch (error_) { console.debug('[MapContextFacade] onMapZoom handler error:', error_); } };
+    this.zoomHandlers.push(wrapper);
+    this.zoomHandlerMap.set(handler, wrapper);
     try {
       const r = this.currentRenderer as any;
       if (r?.onMapZoom) {
-        r.onMapZoom(() => {
-          try { handler(); } catch (error_) { console.debug('[MapContextFacade] onMapZoom handler error:', error_); }
-        });
+        r.onMapZoom(wrapper);
       }
     } catch (error_) { console.debug('[MapContextFacade] onMapZoom setup failed:', error_); }
+  }
+
+  offMapZoom(handler: () => void): void {
+    const wrapper = this.zoomHandlerMap.get(handler as any);
+    if (!wrapper) return;
+    this.zoomHandlerMap.delete(handler as any);
+    const idx = this.zoomHandlers.indexOf(wrapper);
+    if (idx >= 0) this.zoomHandlers.splice(idx, 1);
   }
 
   // Fit bounds with an options object to support different providers
@@ -1035,4 +1067,43 @@ export class MapContextFacade {
   getRegisteredApi(): any {
     return (this as any).INTERNAL?.api ?? null;
   }
+
+  // ========================================
+  // НОВЫЕ ПУБЛИЧНЫЕ МЕТОДЫ ДЛЯ РАБОТЫ С КАРТОЙ
+  // ========================================
+
+  /**
+   * Получение инстанса карты из текущего рендерера
+   */
+  getMap(): any {
+    return this.currentRenderer?.getMap?.();
+  }
+
+  /**
+   * Пересчет размера карты (делегируется текущему рендереру)
+   */
+  invalidateSize(): void {
+    this.currentRenderer?.invalidateSize?.();
+  }
+
+  /**
+   * Подписка на клик по карте (делегируется и сохраняется для восстановления)
+   */
+  onMapClick(handler: (event: any) => void): void {
+    // Create wrapper that our renderer-binding will call with coords
+    const wrapper = (coords: [number, number]) => {
+      try { handler({ latlng: { lat: coords[0], lng: coords[1] } }); } catch (e) { /* ignore */ }
+    };
+    this.clickHandlers.push(wrapper);
+    this.clickHandlerMap.set(handler as any, wrapper);
+  }
+
+  offMapClick(handler: (event: any) => void): void {
+    const wrapper = this.clickHandlerMap.get(handler as any);
+    if (!wrapper) return;
+    this.clickHandlerMap.delete(handler as any);
+    const idx = this.clickHandlers.indexOf(wrapper as any);
+    if (idx >= 0) this.clickHandlers.splice(idx, 1);
+  }
 }
+
