@@ -17,8 +17,8 @@ BEGIN
         CASE p_activity_type
             WHEN 'room_created' THEN room_created_visibility
             WHEN 'room_joined' THEN room_joined_visibility
-            WHEN 'blog_created' THEN blog_created_visibility
-            WHEN 'blog_published' THEN blog_published_visibility
+            WHEN 'post_created' THEN post_created_visibility
+            WHEN 'post_published' THEN post_published_visibility
             WHEN 'marker_created' THEN marker_created_visibility
             WHEN 'route_created' THEN route_created_visibility
             WHEN 'route_shared' THEN route_shared_visibility
