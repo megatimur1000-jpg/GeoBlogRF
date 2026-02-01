@@ -202,10 +202,7 @@ export const approveContent = async (req, res) => {
         tableName = 'map_markers';
         authorIdColumn = 'creator_id';
         break;
-      case 'blogs':
-        tableName = 'blog_posts';
-        authorIdColumn = 'author_id';
-        break;
+      // Legacy 'blogs' support removed — handled via 'posts' case above.
       case 'comments':
         tableName = 'comments';
         authorIdColumn = 'user_id';
