@@ -182,9 +182,10 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const routes = items.filter((i: any) => i.type === 'route');
           const events = items.filter((i: any) => i.type === 'event');
           const places = items.filter((i: any) => i.type !== 'route' && i.type !== 'event');
+          const normalizePurpose = (value: any): FavoriteEvent['purpose'] => (value === 'post' || value === 'event' || value === 'draft') ? value : 'personal';
           setFavoriteRoutes(routes.map((r: any) => ({ ...r, addedAt: r.addedAt ? new Date(r.addedAt) : new Date() })));
-          setFavoriteEvents(events.map((e: any) => ({ ...e, addedAt: e.addedAt ? new Date(e.addedAt) : new Date() })));
-          setFavoritePlaces(places.map((p: any) => ({ ...p, coordinates: p.coordinates || [], addedAt: p.addedAt ? new Date(p.addedAt) : new Date() })));
+          setFavoriteEvents(events.map((e: any) => ({ ...e, purpose: normalizePurpose(e.purpose), addedAt: e.addedAt ? new Date(e.addedAt) : new Date() })));
+          setFavoritePlaces(places.map((p: any) => ({ ...p, coordinates: p.coordinates || [], addedAt: p.addedAt ? new Date(p.addedAt) : new Date() }))); 
         }
       } catch (e) {
         // ignore
@@ -526,6 +527,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
           
           // Создаем новое место из метки
+          const normalizedPurpose = (category === 'post' || category === 'event' || category === 'draft') ? category : 'personal';
           const newPlace: FavoritePlace = {
             id: marker.id,
             name: marker.title || marker.author_name || 'Без названия',
@@ -542,10 +544,10 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             // Новые поля для категоризации
             categories: {
               personal: true,
-              post: category === 'post',
-              event: category === 'event'
+              post: normalizedPurpose === 'post',
+              event: normalizedPurpose === 'event'
             },
-            purpose: category as 'personal' | 'post' | 'event' | 'draft', // Оставляем для совместимости
+            purpose: normalizedPurpose, // Оставляем для совместимости
             tags: [],
             description: marker.description || '',
             visibility: 'private',

@@ -1470,10 +1470,6 @@ const Planner: React.FC<PlannerProps> = function Planner() {
                       <p className="mb-2">Подсказка: выберите готовый вариант для быстрой публикации. Свой вариант может потребовать модерации.</p>
                       <div className="flex flex-wrap items-center gap-3 mt-2">
                         <label className="flex items-center gap-2">
-
-                          <span>для блогов</span>
-                        </label>
-                        <label className="flex items-center gap-2">
                           <input type="checkbox" checked={useForPosts} onChange={(e) => setUseForPosts(e.target.checked)} />
                           <span>для постов</span>
                         </label>

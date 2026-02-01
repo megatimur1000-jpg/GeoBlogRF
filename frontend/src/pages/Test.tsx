@@ -180,7 +180,7 @@ const TestPage = () => {
                         <FaStar className="w-5 h-5 text-yellow-500" />
                         <h1 className="text-xl font-semibold text-slate-800">Рейтинговые элементы</h1>
                       </div>
-                      <span className="text-slate-500 text-sm">• Лучшие метки, маршруты, события и книги по рейтингу</span>
+                      <span className="text-slate-500 text-sm">• Лучшие метки, маршруты и события по рейтингу</span>
                     </div>
                   </div>
                 </div>

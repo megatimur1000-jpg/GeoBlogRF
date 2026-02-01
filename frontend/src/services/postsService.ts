@@ -352,10 +352,12 @@ export const createPost = async (data: CreatePostRequest): Promise<PostDTO> => {
         constructor_data: data.constructor_data,
       };
       
-      // Показываем сообщение пользователю о том, что пост отправлен на модерацию
-      setTimeout(() => {
-        alert('✅ Пост создан и отправлен на модерацию. После одобрения администратором он будет опубликован.');
-      }, 100);
+      // Non-blocking notification: emit content-pending event so UI/notifications handle it
+      try {
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('content-pending', { detail: { contentType: 'post', contentId: pendingId, title: data.title || 'Пост', showOnce: true } }));
+        }
+      } catch (e) { /* ignore */ }
       
       return pendingPost;
     }

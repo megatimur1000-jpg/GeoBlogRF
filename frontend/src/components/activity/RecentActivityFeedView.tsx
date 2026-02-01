@@ -39,7 +39,7 @@ interface ActivityItem {
 const RecentActivityFeedView: React.FC = () => {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'markers' | 'routes' | 'events'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'markers' | 'routes' | 'events' | 'posts'>('all');
 
   useEffect(() => {
     loadRecentActivities();
@@ -126,7 +126,7 @@ const RecentActivityFeedView: React.FC = () => {
   };
 
   const filteredActivities = activities.filter(activity => 
-    activeTab === 'all' || activity.type === (activeTab.replace('s', '') as 'marker' | 'route' | 'event')
+    activeTab === 'all' || activity.type === (activeTab.replace('s', '') as 'marker' | 'route' | 'event' | 'post')
   );
 
   if (loading) {
@@ -153,6 +153,7 @@ const RecentActivityFeedView: React.FC = () => {
             { key: 'markers', label: 'Метки', count: activities.filter(a => a.type === 'marker').length },
             { key: 'routes', label: 'Маршруты', count: activities.filter(a => a.type === 'route').length },
             { key: 'events', label: 'События', count: activities.filter(a => a.type === 'event').length },
+            { key: 'posts', label: 'Посты', count: activities.filter(a => a.type === 'post').length },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key as any)} className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${activeTab === tab.key ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}>
               {tab.label} ({tab.count})
@@ -252,6 +253,7 @@ const getTypeIcon = (type: string) => {
     case 'marker': return <MapPin className="w-4 h-4" />;
     case 'route': return <Navigation className="w-4 h-4" />;
     case 'event': return <Calendar className="w-4 h-4" />;
+    case 'post': return <BookOpen className="w-4 h-4" />;
     default: return <BookOpen className="w-4 h-4" />;
   }
 };
@@ -261,6 +263,7 @@ const getTypeColor = (type: string) => {
     case 'marker': return 'text-blue-500 bg-blue-50';
     case 'route': return 'text-green-500 bg-green-50';
     case 'event': return 'text-purple-500 bg-purple-50';
+    case 'post': return 'text-orange-500 bg-orange-50';
     default: return 'text-gray-500 bg-gray-50';
   }
 };
@@ -270,6 +273,7 @@ const getTypeLabel = (type: string) => {
     case 'marker': return 'Метка';
     case 'route': return 'Маршрут';
     case 'event': return 'Событие';
+    case 'post': return 'Пост';
     default: return 'Активность';
   }
 };
