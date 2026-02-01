@@ -348,23 +348,31 @@ const YandexMap: React.FC<YandexMapProps> = ({
     };
   }, []); // Пустой массив зависимостей - инициализация только один раз
 
+  // Helper to resolve map instance prefering facade-registered background API
+  const resolveMapInstance = () => {
+    try {
+      return (mapFacade().getRegisteredApi()?.map ?? mapInstanceRef.current);
+    } catch (e) { return mapInstanceRef.current; }
+  };
+
   // useEffect для смены центра и zoom - только при реальных изменениях
   useEffect(() => {
-    if (!center || !mapInstanceRef.current || !window.ymaps) {
-        return;
-      }
-      
-      // Проверяем, действительно ли изменились координаты
-      const currentCenter = mapInstanceRef.current.getCenter();
-      const currentZoom = mapInstanceRef.current.getZoom();
-      
-      // Центрируем только если изменения значительные (больше 0.01 градуса или 1 уровня зума)
-      const centerChanged = Math.abs(currentCenter[0] - center[0]) > 0.01 || 
-                           Math.abs(currentCenter[1] - center[1]) > 0.01;
-      const zoomChanged = Math.abs(currentZoom - zoom) > 1;
-      
-      if (centerChanged || zoomChanged) {
-        try { mapFacade().setView(center, zoom); } catch (e) { mapInstanceRef.current.setCenter(center, zoom); }
+    const mapInst = resolveMapInstance();
+    if (!center || !mapInst || !window.ymaps) {
+      return;
+    }
+
+    // Проверяем, действительно ли изменились координаты
+    const currentCenter = mapInst.getCenter();
+    const currentZoom = mapInst.getZoom();
+
+    // Центрируем только если изменения значительные (больше 0.01 градуса или 1 уровня зума)
+    const centerChanged = Math.abs(currentCenter[0] - center[0]) > 0.01 ||
+      Math.abs(currentCenter[1] - center[1]) > 0.01;
+    const zoomChanged = Math.abs(currentZoom - zoom) > 1;
+
+    if (centerChanged || zoomChanged) {
+      try { mapFacade().setView(center, zoom); } catch (e) { try { mapInst.setCenter(center, zoom); } catch (err) { /* ignore */ } }
     }
   }, [center, zoom]);
 
@@ -395,17 +403,17 @@ const YandexMap: React.FC<YandexMapProps> = ({
 
       try {
         // Удаление старых маркеров
+        const mapInst = resolveMapInstance();
         markersRef.current.forEach(marker => {
           try {
-            if (marker && mapInstanceRef.current) {
-              mapInstanceRef.current.geoObjects.remove(marker);
+            if (marker && mapInst) {
+              try { mapInst.geoObjects.remove(marker); } catch (err) { /* ignore */ }
             }
           } catch (error) {
             // Игнорируем ошибки при удалении
           }
         });
         markersRef.current = [];
-
         if (destroyed) return;
 
         // Добавление новых маркеров с горящими стилями
@@ -457,8 +465,9 @@ const YandexMap: React.FC<YandexMapProps> = ({
               }
             );
             
-            if (mapInstanceRef.current && !destroyed) {
-              mapInstanceRef.current.geoObjects.add(marker);
+            const mapInst = resolveMapInstance();
+            if (mapInst && !destroyed) {
+              try { mapInst.geoObjects.add(marker); } catch (err) { /* ignore */ }
               markersRef.current.push(marker);
             }
           } catch (error) {
@@ -492,7 +501,7 @@ const YandexMap: React.FC<YandexMapProps> = ({
               [bounds.maxLng + padding, bounds.maxLat + padding]
             ];
 
-            try { mapFacade().fitBounds({ southWest: [newBounds[0][1], newBounds[0][0]], northEast: [newBounds[1][1], newBounds[1][0]] }, { padding: 50 }); } catch (e) { mapInstanceRef.current.setBounds(newBounds, { checkZoomRange: true, duration: 300 }); }
+            try { mapFacade().fitBounds({ southWest: [newBounds[0][1], newBounds[0][0]], northEast: [newBounds[1][1], newBounds[1][0]] }, { padding: 50 }); } catch (e) { const mapInst = resolveMapInstance(); try { mapInst?.setBounds(newBounds, { checkZoomRange: true, duration: 300 }); } catch (err) { /* ignore */ } }
           } catch (error) {
             // Игнорируем ошибки при автоматическом масштабировании
           }
@@ -503,12 +512,14 @@ const YandexMap: React.FC<YandexMapProps> = ({
     };
 
     // Вызываем updateMarkers сразу, если карта готова
-    if (mapInstanceRef.current && mapInstanceRef.current.geoObjects) {
+const mapInst = resolveMapInstance();
+      if (mapInst && mapInst.geoObjects) {
       updateMarkers();
     } else {
       // Если карта еще не готова, ждем немного и пробуем снова
       const timeoutId = setTimeout(() => {
-        if (!destroyed && mapInstanceRef.current && mapInstanceRef.current.geoObjects) {
+        const m = resolveMapInstance();
+        if (!destroyed && m && m.geoObjects) {
           updateMarkers();
         }
       }, 100);
@@ -548,7 +559,8 @@ const YandexMap: React.FC<YandexMapProps> = ({
               strokeColor: color,
               strokeWidth: 2,
             });
-            mapInstanceRef.current.geoObjects.add(polygon);
+            const mapInst = resolveMapInstance();
+            try { mapInst?.geoObjects.add(polygon); } catch (err) { /* ignore */ }
             zonesRef.current.push(polygon);
           } catch {}
         });
@@ -594,9 +606,10 @@ const YandexMap: React.FC<YandexMapProps> = ({
               opacity: 0.7,
             });
             
-            if (mapInstanceRef.current && !destroyed) {
-              mapInstanceRef.current.geoObjects.add(polyline);
-              mapInstanceRef.current.routeLine = polyline;
+            const mapInst = resolveMapInstance();
+            if (mapInst && !destroyed) {
+              try { mapInst.geoObjects.add(polyline); } catch (err) { /* ignore */ }
+              mapInst.routeLine = polyline;
             }
           } catch (error) {
             // Игнорируем ошибки при создании маршрута
@@ -656,10 +669,11 @@ const YandexMap: React.FC<YandexMapProps> = ({
                 opacity: 0.6,
               });
               
-              if (mapInstanceRef.current && !destroyed) {
-                mapInstanceRef.current.geoObjects.add(polyline);
-                  polylines.push(polyline);
-                }
+              const mapInst = resolveMapInstance();
+          if (mapInst && !destroyed) {
+            try { mapInst.geoObjects.add(polyline); } catch (err) { /* ignore */ }
+            polylines.push(polyline);
+          }
               } catch (error) {
                 // Игнорируем ошибки при создании полилинии
               }
