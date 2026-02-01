@@ -16,7 +16,7 @@ export const LazyCalendar = lazy(() => import('../pages/Calendar'));
 // export const LazyPosts = lazy(() => import('../pages/Posts')); // УДАЛЕНО: теперь статический импорт
 // Blog page removed — export harmless placeholder
 export const LazyBlog = () => null;
-export const LazyChat = lazy(() => import('../pages/Chat'));
+export const LazyChat = lazy(() => import('../pages/ChatDisabled'));
 export const LazyActivity = lazy(() => import('../pages/Activity'));
 export const LazyCentrePage = lazy(() => import('../pages/CentrePage'));
 export const LazyFriends = lazy(() => import('../pages/Friends'));

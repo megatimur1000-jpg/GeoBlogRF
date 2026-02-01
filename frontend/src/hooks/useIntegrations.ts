@@ -40,17 +40,10 @@ export const useIntegrations = () => {
     []
   );
 
+  // Chats are disabled in RF build — stubbed implementation
   const createChatRoom = useCallback(async (eventData: EventType) => {
-    try {
-      const response = await apiClient.post('/chat/rooms', {
-        name: `Чат: ${eventData.title}`,
-        eventId: eventData.id,
-        type: 'event'
-      });
-      return response.data.id;
-    } catch (error) {
-      throw error;
-    }
+    // Return undefined to indicate no chat room created
+    return undefined;
   }, []);
 
   const publishToActivity = useCallback(async (eventData: EventType) => {
@@ -134,7 +127,8 @@ export const useIntegrations = () => {
       // Здесь можно добавить навигацию к соответствующим модулям
       switch (moduleType) {
         case 'chat':
-          window.location.href = `/chat?room=${id}`;
+          // Chat disabled in this build — show fallback message
+          try { alert('Чаты отключены в текущей сборке приложения.'); } catch (e) { }
           break;
         case 'map':
           window.location.href = `/map?marker=${id}`;

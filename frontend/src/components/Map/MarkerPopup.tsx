@@ -190,55 +190,11 @@ const MarkerPopup: React.FC<MarkerPopupProps> = React.memo(({ marker, onClose, o
 
   // Discuss handler
   const handleDiscussClick = async () => {
-    if (!FEATURES.CHAT_ENABLED) {
-      // Чаты отключены
-      return;
-    }
+    // Чаты отключены в этой сборке — показываем информативное сообщение
     try {
-      // Сначала проверяем, существует ли уже чат для этого маркера
-      const searchResponse = await fetch(`/api/chat/rooms?hashtag=${marker.id}`);
-      
-      if (searchResponse.ok) {
-        const existingRooms = await searchResponse.json();
-        if (existingRooms.length > 0) {
-          // Чат уже существует, открываем его
-            openRightPanel('chat');
-          if (navigate) navigate(`/chat?room=${existingRooms[0].id}`);
-          return;
-        }
-      }
-      
-      // Создаём новый чат
-      const chatData = {
-        name: marker.title,
-        hashtag: String(marker.id),
-        title: marker.title,
-        description: marker.hashtags?.join(', ') || `Обсуждение места: ${marker.title}`,
-        type: 'marker',
-        creatorId: 1 // ID текущего пользователя (пока хардкод)
-      };
-      
-      const response = await fetch('/api/chat/rooms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(chatData),
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        
-        // Автоматически открываем чат-панель
-          openRightPanel('chat');
-        
-        // Переходим на страницу чата
-        if (navigate) navigate(`/chat?room=${result.id}`);
-      } else {
-        // Handle error silently or show user-friendly message
-      }
+      alert('Чаты отключены в текущей сборке приложения. Обсуждения недоступны.');
     } catch (error) {
-      // Handle error silently or show user-friendly message
+      // noop
     }
   };
 
