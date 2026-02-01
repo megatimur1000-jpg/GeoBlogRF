@@ -62,9 +62,12 @@ const MiniEventMap: React.FC<MiniEventMapProps> = ({
               try { markerRef.current.setLatLng(e.latlng); } catch (err) { }
             } else {
               // Создаем новый маркер локально
-              const marker = L.marker(e.latlng, {
-                draggable: true,
-              }).addTo(map);
+              const marker = L.marker(e.latlng, { draggable: true });
+              if (map) {
+                marker.addTo(map);
+              } else {
+                console.warn('[MiniEventMap] map is not available to add marker to yet');
+              }
 
               marker.on('dragend', () => {
                 try {
@@ -83,7 +86,15 @@ const MiniEventMap: React.FC<MiniEventMapProps> = ({
         };
 
         // Подписываемся на клики. Если рендерер не поддерживает onMapClick, используем L handler.
-        try { renderer.onMapClick?.(clickHandler); } catch (e) { map.on('click', clickHandler); }
+        try {
+          if (typeof renderer.onMapClick === 'function') {
+            renderer.onMapClick(clickHandler);
+          } else if (map) {
+            map.on('click', clickHandler);
+          }
+        } catch (e) {
+          try { map?.on('click', clickHandler); } catch (_) { }
+        }
         clickHandlerRef.current = clickHandler;
       } catch (err) {
         console.warn('[MiniEventMap] Failed to initialize renderer', err);
@@ -122,16 +133,19 @@ const MiniEventMap: React.FC<MiniEventMapProps> = ({
     if (markerRef.current) {
       markerRef.current.setLatLng(latlng);
     } else {
-      const marker = L.marker(latlng, {
-        draggable: true,
-      }).addTo(mapInstanceRef.current);
-      
+      const marker = L.marker(latlng, { draggable: true });
+      if (mapInstanceRef.current) {
+        marker.addTo(mapInstanceRef.current);
+      } else {
+        console.warn('[MiniEventMap] mapInstance is not available to add marker to yet');
+      }
+
       marker.on('dragend', () => {
         const pos = marker.getLatLng();
         const newPosition: [number, number] = [pos.lat, pos.lng];
         onMarkerPositionChangeRef.current?.(newPosition);
       });
-      
+
       markerRef.current = marker;
     }
 
