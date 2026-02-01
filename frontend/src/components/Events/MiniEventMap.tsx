@@ -22,6 +22,7 @@ const MiniEventMap: React.FC<MiniEventMapProps> = ({
   onMapClick,
   className = '',
 }) => {
+  // NOTE: mapRef is a DOM container for the small map — prefer facade API for map operations when possible.
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any | null>(null);
   const markerRef = useRef<any | null>(null);

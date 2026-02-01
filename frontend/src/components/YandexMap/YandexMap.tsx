@@ -120,6 +120,8 @@ const YandexMap: React.FC<YandexMapProps> = ({
       default: return '#10b981';
     }
   };
+  // NOTE: mapRef is only the DOM container for Yandex map. Do NOT assign the map instance to this ref.
+  // Use `mapFacade()` where map APIs are needed.
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);

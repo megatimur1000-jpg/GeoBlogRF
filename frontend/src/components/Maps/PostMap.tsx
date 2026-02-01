@@ -61,6 +61,8 @@ export const PostMap: React.FC<PostMapProps> = ({
   const [selectedMarkerIdForPopup, setSelectedMarkerIdForPopup] = useState<string | null>(null);
   const [loadedMarkerData, setLoadedMarkerData] = useState<MarkerData | null>(null);
   const isLoadingMarkerRef = useRef<boolean>(false);
+  // NOTE: mapRef here is a DOM container ref only — do not use it to access the underlying map instance.
+  // For map operations prefer `mapFacade()` or add facade methods.
   const mapRef = useRef<any>(null);
   const popupCloseTimeoutRef = useRef<number | null>(null);
   const hasCenteredRef = useRef<boolean>(false);

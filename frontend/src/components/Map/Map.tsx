@@ -149,6 +149,8 @@ function Map(props: MapProps) {
 
     // --- REFS ---
     // Use `any` for internal Leaflet instances to avoid direct Leaflet types in components
+    // NOTE: mapRef is a DOM container ref only — do NOT rely on it to access the map instance.
+    // Use `mapFacade()` or `mapFacade().getMap?.()` to access map APIs instead.
     const mapRef = useRef<any | null>(null);
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
 

@@ -59,6 +59,7 @@ const SimplifiedMap: React.FC<SimplifiedMapProps> = ({
   markerId, 
   className 
 }) => {
+  // NOTE: mapRef is only the DOM container for ephemeral maps. Use `mapFacade()` for map API interactions.
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
