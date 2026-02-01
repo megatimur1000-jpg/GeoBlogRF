@@ -81,6 +81,11 @@ describe('useMapMarkers', () => {
 
   it('creates cluster group and markers', async () => {
     const mapRef = { current: { eachLayer: () => {} } } as any;
+
+    // Ensure the mocked facade returns the same map instance used by the hook
+    const realFacade = (await import('../../services/map_facade')).mapFacade();
+    (realFacade as any).getMap = () => mapRef.current;
+
     render(<TestWrapper
       mapRef={mapRef}
       markerClusterGroupRef={{ current: null }}
@@ -129,6 +134,10 @@ describe('useMapMarkers', () => {
       onHashtagClickFromPopup: vi.fn(),
       onAddToBlog: vi.fn()
     } as any;
+
+    // Ensure the mocked facade returns the same map instance used by the hook
+    const realFacade = (await import('../../services/map_facade')).mapFacade();
+    (realFacade as any).getMap = () => mapRef.current;
 
     const { unmount } = render(<TestWrapper {...hookProps} />);
 

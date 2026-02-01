@@ -53,9 +53,10 @@ export class OSMMapRenderer implements IMapRenderer {
   /**
    * Добавляет слой тайлов на карту. Публичный метод для фасада.
    */
-  public addTileLayer(url?: string, options?: L.TileLayerOptions): L.TileLayer {
+  public addTileLayer(url?: string, options?: L.TileLayerOptions): L.TileLayer | null {
     if (!this.mapInstance) {
-      throw new Error('Карта не инициализирована');
+      console.warn('[OSMMapRenderer] addTileLayer called but map is not initialized');
+      return null;
     }
     const tileUrl = url || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     const tileOpts = options || {
@@ -92,6 +93,11 @@ export class OSMMapRenderer implements IMapRenderer {
     this.mapInstance.on('moveend', handler);
   }
 
+  public offMapMove(handler: (e: L.LeafletEvent) => void): void {
+    if (!this.mapInstance) return;
+    this.mapInstance.off('moveend', handler);
+  }
+
   /**
    * Подписка на завершение изменения зума (zoomend вместо zoom).
    */
@@ -100,11 +106,52 @@ export class OSMMapRenderer implements IMapRenderer {
     this.mapInstance.on('zoomend', handler);
   }
 
-  public getMap(): L.Map {
+  public offMapZoom(handler: (e: L.LeafletEvent) => void): void {
+    if (!this.mapInstance) return;
+    this.mapInstance.off('zoomend', handler);
+  }
+
+  /**
+   * Подписка на начало перемещения карты (movestart).
+   */
+  public onMapMoveStart(handler: (e: L.LeafletEvent) => void): void {
+    if (!this.mapInstance) return;
+    this.mapInstance.on('movestart', handler);
+  }
+
+  public offMapMoveStart(handler: (e: L.LeafletEvent) => void): void {
+    if (!this.mapInstance) return;
+    this.mapInstance.off('movestart', handler);
+  }
+
+  /**
+   * Подписка на начало изменения зума (zoomstart).
+   */
+  public onMapZoomStart(handler: (e: L.LeafletEvent) => void): void {
+    if (!this.mapInstance) return;
+    this.mapInstance.on('zoomstart', handler);
+  }
+
+  public offMapZoomStart(handler: (e: L.LeafletEvent) => void): void {
+    if (!this.mapInstance) return;
+    this.mapInstance.off('zoomstart', handler);
+  }
+
+  public getMap(): L.Map | null {
     if (!this.mapInstance) {
-      throw new Error('Карта не инициализирована');
+      // Не выбрасываем ошибку — фасад и компоненты ожидают `null`/`undefined` когда карта ещё не готова
+      console.warn('[OSMMapRenderer] getMap called but map is not initialized');
+      return null;
     }
     return this.mapInstance;
+  }
+
+  /**
+   * Анимированно перелететь к позиции
+   */
+  public flyTo(center: LatLng, zoom?: number, options?: any): void {
+    if (!this.mapInstance) return;
+    try { this.mapInstance.flyTo(center, zoom, options); } catch (e) { console.debug('[OSMMapRenderer] flyTo failed:', e); }
   }
 
   renderMarkers(markers: UnifiedMarker[]): void {
@@ -143,18 +190,76 @@ export class OSMMapRenderer implements IMapRenderer {
     // Реализация отрисовки маршрута (полилиния и т.д.)
   }
 
-  setView(center: GeoPoint, zoom: number): void {
+  setView(center: GeoPoint | LatLng, zoom: number): void {
     if (!this.mapInstance) {
       console.warn('[OSMMapRenderer] Map not initialized, cannot set view');
       return;
     }
     try {
-      this.mapInstance.setView([center.lat, center.lon], zoom);
+      if (Array.isArray(center)) {
+        this.mapInstance.setView([center[0], center[1]], zoom);
+      } else {
+        this.mapInstance.setView([center.lat, center.lon], zoom);
+      }
     } catch (e) {
       console.warn('[OSMMapRenderer] Failed to set view:', e);
     }
   }
 
+  // Проектирование latlng в точку контейнера
+  project(latlng: LatLng): { x: number; y: number } {
+    if (!this.mapInstance) return { x: 0, y: 0 };
+    try {
+      const p = this.mapInstance.project([latlng[0], latlng[1]]);
+      return { x: p.x, y: p.y };
+    } catch (e) {
+      console.debug('[OSMMapRenderer] project failed:', e);
+      return { x: 0, y: 0 };
+    }
+  }
+
+  // Обратное проектирование точки в latlng
+  unproject(point: { x: number; y: number }, zoom?: number): LatLng {
+    if (!this.mapInstance) return [0, 0];
+    try {
+      const ll = this.mapInstance.unproject(L.point(point.x, point.y), zoom);
+      return [ll.lat, ll.lng];
+    } catch (e) {
+      console.debug('[OSMMapRenderer] unproject failed:', e);
+      return [0, 0];
+    }
+  }
+
+  getSize(): { x: number; y: number } {
+    if (!this.mapInstance) return { x: 0, y: 0 };
+    try {
+      const s = this.mapInstance.getSize();
+      return { x: s.x, y: s.y };
+    } catch (e) {
+      console.debug('[OSMMapRenderer] getSize failed:', e);
+      return { x: 0, y: 0 };
+    }
+  }
+
+  getZoom(): number {
+    if (!this.mapInstance) return 0;
+    try {
+      return this.mapInstance.getZoom();
+    } catch (e) {
+      console.debug('[OSMMapRenderer] getZoom failed:', e);
+      return 0;
+    }
+  }
+
+  eachLayer(fn: (layer: L.Layer) => void): void {
+    if (!this.mapInstance) return;
+    try { this.mapInstance.eachLayer(fn); } catch (e) { console.debug('[OSMMapRenderer] eachLayer failed:', e); }
+  }
+
+  removeLayer(layer: L.Layer): void {
+    if (!this.mapInstance) return;
+    try { this.mapInstance.removeLayer(layer); } catch (e) { console.debug('[OSMMapRenderer] removeLayer failed:', e); }
+  }
   destroy(): void {
     if (this.mapInstance) {
       try {

@@ -38,12 +38,12 @@ export function useMapMarkers(opts: UseMapMarkersOptions) {
 
   useEffect(() => {
     try {
-      const map = mapRef.current;
+      const map = mapFacade().getMap?.();
       if (!map) return;
 
       // Remove existing cluster group if any
       if (markerClusterGroupRef.current) {
-        try { map.removeLayer(markerClusterGroupRef.current); } catch (e) { }
+        try { mapFacade().removeLayer(markerClusterGroupRef.current); } catch (e) { }
         markerClusterGroupRef.current = null;
       }
 
@@ -198,7 +198,7 @@ export function useMapMarkers(opts: UseMapMarkersOptions) {
           activePopupRoots.current = {};
         } catch (e) { }
 
-        try { if (markerClusterGroupRef.current) { map.removeLayer(markerClusterGroupRef.current); markerClusterGroupRef.current = null; } } catch (e) { }
+        try { if (markerClusterGroupRef.current) { try { mapFacade().removeLayer(markerClusterGroupRef.current); } catch (e) { } markerClusterGroupRef.current = null; } } catch (e) { }
       };
 
     } catch (err) {

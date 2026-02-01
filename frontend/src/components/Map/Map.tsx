@@ -149,6 +149,8 @@ function Map(props: MapProps) {
 
     // --- REFS ---
     // Use `any` for internal Leaflet instances to avoid direct Leaflet types in components
+    // NOTE: mapRef is a DOM container ref only — do NOT rely on it to access the map instance.
+    // Use `mapFacade()` or `mapFacade().getMap?.()` to access map APIs instead.
     const mapRef = useRef<any | null>(null);
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -297,10 +299,10 @@ function Map(props: MapProps) {
         }
         
         // Инвалидируем размер карты при изменении режима
-        if (mapRef.current && mapDisplayMode.shouldShowFullscreen) {
+        if (mapDisplayMode.shouldShowFullscreen) {
             setTimeout(() => {
                 try {
-                    mapRef.current?.invalidateSize();
+                    mapFacade()?.invalidateSize();
                 } catch (e) {}
             }, 100);
         }
@@ -316,13 +318,9 @@ function Map(props: MapProps) {
                 const topValue = mapDisplayMode.shouldShowFullscreen ? `${h}px` : `${h}px`;
                 document.documentElement.style.setProperty('--facade-map-top', topValue);
                 
-                if (mapRef.current) {
-                    setTimeout(() => {
-                        try {
-                            mapRef.current?.invalidateSize();
-                        } catch (e) { }
-                    }, 120);
-                }
+                setTimeout(() => {
+                    try { mapFacade()?.invalidateSize(); } catch (e) { }
+                }, 120);
             } catch (e) { }
         };
 
@@ -333,39 +331,37 @@ function Map(props: MapProps) {
 
     // --- CENTER/ZOOM FROM PROPS (only if no saved state) ---
     useEffect(() => {
-        if (!mapRef.current) return;
+        const mapInstance = mapFacade().getMap?.();
+        if (!mapInstance) return;
 
         const savedState = useMapStateStore.getState().contexts.osm;
         if (savedState.initialized) {
             try {
-                mapRef.current.setView(savedState.center, savedState.zoom, { animate: false });
+                mapFacade()?.setView(savedState.center, savedState.zoom);
             } catch (e) { }
             return;
         }
 
         try {
-            mapRef.current.setView(center, zoom, { animate: false });
+            mapFacade()?.setView(center, zoom);
         } catch (e) { }
     }, [center, zoom]);
 
     // --- UNIFIED RESIZE HANDLER ---
     useEffect(() => {
-        if (!mapRef.current) return;
+        const mapInstance = mapFacade().getMap?.();
+        if (!mapInstance) return;
 
         let timeoutId: NodeJS.Timeout | null = null;
 
         const handleResize = () => {
             if (timeoutId) clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
-                try {
-                    mapRef.current?.invalidateSize();
-                } catch (e) { }
+                try { mapFacade()?.invalidateSize(); } catch (e) { }
             }, 350);
         };
 
-        try {
-            mapRef.current.invalidateSize();
-        } catch (e) { }
+        try { mapFacade()?.invalidateSize(); } catch (e) { }
 
         handleResize();
 
@@ -376,7 +372,8 @@ function Map(props: MapProps) {
 
     // --- INTERSECTION OBSERVER FOR VISIBILITY ---
     useEffect(() => {
-        if (!mapRef.current || !mapContainerRef.current) return;
+        const mapInstance = mapFacade().getMap?.();
+        if (!mapInstance || !mapContainerRef.current) return;
 
         if ('IntersectionObserver' in window) {
             const observer = new IntersectionObserver(
@@ -385,7 +382,7 @@ function Map(props: MapProps) {
                         if (entry.isIntersecting && entry.intersectionRatio > 0) {
                             setTimeout(() => {
                                 try {
-                                    mapRef.current?.invalidateSize();
+                                    try { mapFacade()?.invalidateSize(); } catch (e) { }
                                 } catch (e) { }
                             }, 100);
                         }
@@ -412,7 +409,8 @@ function Map(props: MapProps) {
             }
         })();
 
-        if (mapRef.current) {
+        const existingMap = mapFacade().getMap?.();
+        if (existingMap) {
             setError(null);
             return;
         }
@@ -502,31 +500,30 @@ function Map(props: MapProps) {
                 }
 
                 const facadeApi = (INTERNAL as any)?.api || initResult || {};
-                if (facadeApi && (facadeApi as any).map) {
-                    mapRef.current = (facadeApi as any).map as any;
-                } else if (facadeApi && (facadeApi as any).mapInstance) {
-                    mapRef.current = (facadeApi as any).mapInstance as any;
-                                } else {
-                    // FACADE: Используем OSMMapRenderer вместо прямого вызова L.map
+                let mapInstance: any = facadeApi?.map ?? facadeApi?.mapInstance ?? initResult?.map ?? initResult?.mapInstance ?? mapFacade().getMap?.();
+                if (!mapInstance) {
+                    // FACADE: Попытка инициализировать через фасад как последний вариант
                     try {
-                        // Используем фасад для инициализации карты как последний вариант
                         await mapFacade().initialize(mapContainer, { ...config, preserveState: true });
-                        mapRef.current = mapFacade().getMap?.();
+                        mapInstance = mapFacade().getMap?.();
                     } catch (e) {
-                        console.error("Ошибка инициализации карты через фасад", e);
+                        console.error('Ошибка инициализации карты через фасад', e);
                     }
                 }
 
-                if (!mapRef.current) {
+                if (!mapInstance) {
                     throw new Error('Фасад не вернул карту после инициализации.');
                 }
 
-                const map = mapRef.current;
+                // NOTE: We no longer assign the internal map instance to `mapRef.current`.
+                // Consumers should use `mapFacade()` or `mapFacade().getMap?.()` when raw access is required.
+                let map: any = mapInstance;
 
-                if (mapRef.current && typeof (mapRef.current as any).addLayer !== 'function') {
+                if (map && typeof map.addLayer !== 'function') {
                     const possibleInner = (facadeApi as any)?.map || (facadeApi as any)?.mapInstance || (initResult && (initResult as any).map);
                     if (possibleInner && typeof possibleInner.addLayer === 'function') {
-                        mapRef.current = possibleInner as any;
+                        // Use the inner map directly when needed; do not rely on `mapRef` assignment.
+                        map = possibleInner;
                     }
                 }
 
@@ -561,21 +558,19 @@ function Map(props: MapProps) {
                 }
 
                 setTimeout(() => {
-                    if (mapRef.current) {
-                        try { mapRef.current.invalidateSize(); } catch (e) { }
-                    }
+                    try { mapFacade()?.invalidateSize(); } catch (e) { }
                 }, 100);
 
-                mapRef.current?.eachLayer((layer: any) => {
+                mapFacade()?.eachLayer((layer: any) => {
                     if (layer && typeof layer.getLayers === 'function' && layer !== markerClusterGroupRef.current) {
-                        try { mapRef.current?.removeLayer(layer); } catch (e) { }
+                        try { mapFacade()?.removeLayer(layer); } catch (e) { }
                     }
                 });
 
                 // Подписываемся на событие завершения перемещения через фасад
                 const boundsHandler = () => {
                     try {
-                        const mapInstance = mapFacade().getMap?.() ?? mapRef.current;
+                        const mapInstance = mapFacade().getMap?.();
                         if (!mapInstance || !onBoundsChange) return;
                         const bounds = mapInstance.getBounds();
                         if (bounds && typeof bounds.getNorth === 'function') {
@@ -596,22 +591,23 @@ function Map(props: MapProps) {
                 // Подписываемся на клик карты через фасад
                 const handleMapClick = async (e: any) => {
                     try {
-                        if (!mapRef.current) return; // Guard to avoid crashes if map is gone
+                        const mapInstance = mapFacade().getMap?.() ?? null;
+                        if (!mapInstance) return; // Guard to avoid crashes if map is gone
                         if (isAddingMarkerModeRef.current) {
                             if (tempMarkerRef.current) {
-                                try { mapRef.current.removeLayer(tempMarkerRef.current); } catch (err) { }
+                                try { mapFacade().removeLayer(tempMarkerRef.current); } catch (err) { }
                             }
 
                             const clickedLatLng = e.latlng;
-                            const zoom = mapRef.current.getZoom();
-                            const mapSize = mapRef.current.getSize();
+                            const zoom = mapFacade().getZoom();
+                            const mapSize = mapFacade().getSize();
                             const targetScreenY = mapSize.y * 0.25;
                             const screenCenterY = mapSize.y / 2;
                             const offsetY = targetScreenY - screenCenterY;
-                            const projectedClick = mapRef.current.project(clickedLatLng, zoom);
+                            const projectedClick = mapFacade().project([clickedLatLng.lat, clickedLatLng.lng]);
                             const targetCenterPoint = mapFacade().point(projectedClick.x, projectedClick.y - offsetY);
-                            const targetCenterLatLng = mapRef.current.unproject(targetCenterPoint, zoom);
-                            try { mapRef.current.setView(targetCenterLatLng, zoom, { animate: true }); } catch (err) { }
+                            const targetCenterLatLng = mapFacade().unproject({ x: targetCenterPoint.x, y: targetCenterPoint.y }, zoom);
+                            try { mapFacade().setView(targetCenterLatLng, zoom); } catch (err) { }
 
                             const tempIcon = mapFacade().createDivIcon({
                                 className: 'temp-marker-icon',
@@ -662,13 +658,14 @@ function Map(props: MapProps) {
                     errMsg.includes('Failed to fetch') ||
                     errMsg.includes('NetworkError');
 
-                if (isNonCriticalError && mapRef.current) {
+                const mapInstance = mapFacade().getMap?.() ?? null;
+                if (isNonCriticalError && mapInstance) {
                     setIsLoading(false);
                     setError(null);
                     return;
                 }
 
-                if (!isNonCriticalError && !mapRef.current) {
+                if (!isNonCriticalError && !mapInstance) {
                     setError(t('map.error.initialization') || 'Ошибка инициализации карты');
                 } else {
                     setError(null);
@@ -680,11 +677,9 @@ function Map(props: MapProps) {
         initMapAndLoadMarkers();
 
         return () => {
-            if (mapRef.current) {
-                if (tempMarkerRef.current) {
-                    try { mapRef.current.removeLayer(tempMarkerRef.current); } catch (e) { }
-                    tempMarkerRef.current = null;
-                }
+            if (tempMarkerRef.current) {
+                try { mapFacade()?.removeLayer(tempMarkerRef.current); } catch (e) { }
+                tempMarkerRef.current = null;
             }
 
             // Call any registered facade handler removers
@@ -700,15 +695,14 @@ function Map(props: MapProps) {
 
     // --- MAP STATE SAVING ---
     useEffect(() => {
-        if (!mapRef.current || !isMapReady) return;
-
-        const map = mapRef.current;
+        if (!isMapReady) return;
 
         const saveState = () => {
             try {
-                const currentCenter = map.getCenter();
-                const currentZoom = map.getZoom();
-                useMapStateStore.getState().saveCurrentState('osm', [currentCenter.lat, currentCenter.lng], currentZoom);
+                const currentCenter = mapFacade().getCenter?.();
+                const currentZoom = mapFacade().getZoom?.() ?? 0;
+                if (!currentCenter) return;
+                useMapStateStore.getState().saveCurrentState('osm', [currentCenter[0], currentCenter[1]], currentZoom);
             } catch (e) { }
         };
 
@@ -727,12 +721,12 @@ function Map(props: MapProps) {
 
     // --- MAP TYPE CHANGE ---
     useEffect(() => {
-        if (!mapRef.current) return;
-        const map = mapRef.current;
+        const map = mapFacade().getMap?.();
+        if (!map) return;
         const tileLayerInfo = getTileLayer(mapSettings.mapType);
 
         if (tileLayerRef.current) {
-            map.removeLayer(tileLayerRef.current);
+            try { mapFacade().removeLayer(tileLayerRef.current); } catch (e) { }
         }
 
         const newTileLayer = mapFacade().addTileLayer(tileLayerInfo.url, {
@@ -745,23 +739,22 @@ function Map(props: MapProps) {
 
     // --- TRAFFIC & BIKE LANES ---
     useEffect(() => {
-        if (!mapRef.current) return;
-        const map = mapRef.current;
-
-        map.eachLayer((layer: any) => {
+        // Remove any existing traffic/bike layers via facade
+        mapFacade()?.eachLayer((layer: any) => {
             // Avoid instanceof checks against Leaflet classes; rely on properties instead
             const containerClass = (layer as any).getContainer?.()?.className || '';
             if (((layer as any)?._url || containerClass.includes('traffic-layer') || containerClass.includes('bike-lanes-layer'))) {
-                try { map.removeLayer(layer); } catch (e) { }
+                try { mapFacade()?.removeLayer(layer); } catch (e) { }
             }
         });
 
         document.querySelectorAll('.layer-indicator').forEach(indicator => indicator.remove());
 
-        if (L) {
+        if (typeof (window as any).L !== 'undefined') {
+            const map = mapFacade().getMap?.();
             const additionalLayers = getAdditionalLayers(mapSettings.showTraffic, mapSettings.showBikeLanes);
             additionalLayers.forEach((layer) => {
-                layer.addTo(map);
+                try { (layer as any).addTo(map); } catch (e) { }
                 const layerType = (layer as any).getContainer?.()?.className?.includes('traffic-layer') ? 'traffic' : 'bike';
                 const indicator = createLayerIndicator(layerType);
                 map.getContainer().appendChild(indicator);
@@ -842,7 +835,7 @@ function Map(props: MapProps) {
 
     // --- EVENT MARKER CENTERING ---
     useEffect(() => {
-        if (!mapRef.current || !selectedEvent) return;
+        if (!selectedEvent) return;
         if (selectedEvent.latitude == null || selectedEvent.longitude == null) return;
 
         const lat = selectedEvent.latitude;
@@ -850,17 +843,17 @@ function Map(props: MapProps) {
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
 
         try {
-            mapRef.current.setView([lat, lng], 14, { animate: true, duration: 0.5 });
+            mapFacade()?.setView([lat, lng], 14);
         } catch (error) { }
     }, [selectedEvent]);
 
     // --- ROUTE RENDER ---
     useEffect(() => {
-        if (!mapRef.current || !routeData) return;
+        if (!routeData) return;
 
-        mapRef.current.eachLayer((layer: any) => {
+        mapFacade()?.eachLayer((layer: any) => {
             if ((layer as any).isRouteLayer) {
-                try { mapRef.current?.removeLayer(layer); } catch (e) { }
+                try { mapFacade()?.removeLayer(layer); } catch (e) { }
             }
         });
 
@@ -931,21 +924,21 @@ function Map(props: MapProps) {
             });
         }
 
-        if (mapRef.current && allLatLngs.length > 0) {
+        if (allLatLngs.length > 0) {
             const bounds = mapFacade().latLngBounds(allLatLngs);
             mapFacade().fitBounds(bounds, { padding: [60, 60] });
         }
 
         let zoomHandler: any;
-        if (mapRef.current && routePolyline) {
+        if (routePolyline) {
             const updateStyle = () => {
-                const z = mapRef.current?.getZoom() ?? 0;
+                const z = mapFacade().getZoom?.() ?? 0;
                 const weight = z <= 5 ? 8 : z <= 8 ? 6 : z <= 12 ? 5 : 4;
                 routePolyline!.setStyle({ weight });
             };
             updateStyle();
             zoomHandler = () => updateStyle();
-            mapRef.current.on('zoomend', zoomHandler);
+            mapFacade().onMapZoom(zoomHandler);
         }
 
         const routeStyles = document.createElement('style');
@@ -953,15 +946,13 @@ function Map(props: MapProps) {
         document.head.appendChild(routeStyles);
 
         return () => {
-            if (mapRef.current) {
-                mapRef.current.eachLayer((layer: L.Layer) => {
-                    if ((layer as any).isRouteLayer) {
-                        mapRef.current?.removeLayer(layer);
-                    }
-                });
-                if (zoomHandler) {
-                    mapRef.current.off('zoomend', zoomHandler);
+            mapFacade()?.eachLayer((layer: L.Layer) => {
+                if ((layer as any).isRouteLayer) {
+                    try { mapFacade()?.removeLayer(layer); } catch (e) { }
                 }
+            });
+            if (zoomHandler) {
+                mapFacade().offMapZoom(zoomHandler);
             }
             document.querySelectorAll('style').forEach(s => {
                 if (s.innerHTML.includes('route-marker') || s.innerHTML.includes('route-polyline')) {
@@ -973,11 +964,10 @@ function Map(props: MapProps) {
 
     // --- ZONES RENDER ---
     useEffect(() => {
-        if (!mapRef.current) return;
-
-        mapRef.current.eachLayer((layer: any) => {
+        // remove existing zone layers via facade
+        mapFacade()?.eachLayer((layer: any) => {
             if ((layer as any)?.isZoneLayer) {
-                try { mapRef.current?.removeLayer(layer); } catch (e) { }
+                try { mapFacade()?.removeLayer(layer); } catch (e) { }
             }
         });
 
@@ -993,10 +983,9 @@ function Map(props: MapProps) {
                     weight: 2,
                 });
 
-                // ИСПРАВЛЕНИЕ: Добавляем полигон на карту и помечаем его
-                if (polygon && mapRef.current && typeof (polygon as any).addTo === 'function') {
-                    polygon.addTo(mapRef.current);
-                    (polygon as any).isZoneLayer = true;
+                // Mark polygon as zone layer (polygon already added by facade)
+                if (polygon) {
+                    try { (polygon as any).isZoneLayer = true; } catch (e) { /* ignore */ }
                 }
             });
         });
@@ -1004,14 +993,15 @@ function Map(props: MapProps) {
 
     // --- FLY TO ---
     useEffect(() => {
-        if (flyToCoordinates && mapRef.current) {
-            mapRef.current.flyTo(flyToCoordinates, mapRef.current.getZoom(), { animate: true, duration: 1.2 });
+        if (flyToCoordinates) {
+            mapFacade().flyTo(flyToCoordinates, undefined, { animate: true, duration: 1.2 });
         }
     }, [flyToCoordinates]);
 
     // --- SEARCH RADIUS CIRCLE ---
     useEffect(() => {
-        if (!mapRef.current) return;
+        const map = mapFacade().getMap?.();
+        if (!map) return;
         let radiusCircle: any = null;
 
         if (filters.radiusOn) {
@@ -1026,18 +1016,21 @@ function Map(props: MapProps) {
 
             if (radiusCircle) {
                 radiusCircle.on('mousedown', function (_: any) {
-                    mapRef.current?.dragging?.disable();
+                    const m = mapFacade().getMap?.();
+                    m?.dragging?.disable?.();
                     const onMove = (ev: any) => {
                         if (radiusCircle) radiusCircle.setLatLng(ev.latlng);
                     };
                     const onUp = (ev: any) => {
                         onSearchRadiusCenterChange([ev.latlng.lat, ev.latlng.lng]);
-                        mapRef.current?.off('mousemove', onMove);
-                        mapRef.current?.off('mouseup', onUp);
-                        mapRef.current?.dragging?.enable();
+                        const m2 = mapFacade().getMap?.();
+                        m2?.off?.('mousemove', onMove);
+                        m2?.off?.('mouseup', onUp);
+                        m2?.dragging?.enable?.();
                     };
-                    mapRef.current?.on('mousemove', onMove);
-                    mapRef.current?.on('mouseup', onUp);
+                    const m2 = mapFacade().getMap?.();
+                    m2?.on?.('mousemove', onMove);
+                    m2?.on?.('mouseup', onUp);
                 });
             }
         }
@@ -1047,20 +1040,18 @@ function Map(props: MapProps) {
 
     // --- MINI POPUP CLOSE ON MOVE ---
     useEffect(() => {
-        if (!mapRef.current) return;
-        const map = mapRef.current;
-
         const closeMiniPopup = () => {
             setMiniPopup(null);
             setEventMiniPopup(null);
         };
 
-        map.on('movestart', closeMiniPopup);
-        map.on('zoomstart', closeMiniPopup);
+        // Use facade start handlers to be renderer-agnostic
+        mapFacade().onMapMoveStart(closeMiniPopup);
+        mapFacade().onMapZoomStart(closeMiniPopup);
 
         return () => {
-            map.off('movestart', closeMiniPopup);
-            map.off('zoomstart', closeMiniPopup);
+            mapFacade().offMapMoveStart(closeMiniPopup);
+            mapFacade().offMapZoomStart(closeMiniPopup);
         };
     }, []);
 
@@ -1172,7 +1163,7 @@ function Map(props: MapProps) {
     // Local helper removed — use exported `latLngToContainerPoint(mapFacade, latlng)` instead.
 
     // --- MAP READY CHECK ---
-    const isMapReadyCheck = isMapReady || mapRef.current || ((mapFacade() as any)?.INTERNAL?.api?.map);
+    const isMapReadyCheck = isMapReady || !!mapFacade().getMap?.() || !!((mapFacade() as any)?.INTERNAL?.api?.map);
 
     // --- SELECTED MARKER POPUP ---
     const selectedMarkerPopup = useMemo(() => {
@@ -1351,8 +1342,8 @@ function Map(props: MapProps) {
                         coords={coordsForNewMarker}
                         showCultureMessage={false}
                         onSubmit={async (data: any) => {
-                            if (mapRef.current && tempMarkerRef.current) {
-                                mapRef.current.removeLayer(tempMarkerRef.current);
+                            if (tempMarkerRef.current) {
+                                try { mapFacade().removeLayer(tempMarkerRef.current); } catch (e) { }
                                 setTempMarker(null);
                             }
                             const markerDataWithCoords = {
@@ -1364,9 +1355,10 @@ function Map(props: MapProps) {
                             setCoordsForNewMarker(null);
                             setDiscoveredPlace(null);
                         }}
+
                         onCancel={() => {
-                            if (mapRef.current && tempMarkerRef.current) {
-                                mapRef.current.removeLayer(tempMarkerRef.current);
+                            if (tempMarkerRef.current) {
+                                try { mapFacade().removeLayer(tempMarkerRef.current); } catch (e) { }
                                 setTempMarker(null);
                             }
                             setCoordsForNewMarker(null);

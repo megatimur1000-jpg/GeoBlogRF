@@ -3,6 +3,7 @@ import type {
   MapFacadeDependencies,
   IMapRenderer,
   GeoPoint,
+  LatLng,
   UnifiedMarker,
   PersistedRoute,
   TrackedRoute,
@@ -61,11 +62,31 @@ export class MapContextFacade {
   // Добавлены новые реестры для событий перемещения и зума
   private readonly moveHandlers: Array<() => void> = [];
   private readonly zoomHandlers: Array<() => void> = [];
+  // Start handlers
+  private readonly moveStartHandlers: Array<() => void> = [];
+  private readonly zoomStartHandlers: Array<() => void> = [];
+
+  // Dispatcher callbacks attached to the renderer exactly once. They iterate
+  // the registered handlers and call them safely. Using a single dispatcher
+  // prevents duplicate firing when switching renderers or attaching handlers.
+  private readonly moveStartDispatcher = () => {
+    this.moveStartHandlers.forEach(h => {
+      try { h(); } catch (error_) { console.debug('[MapContextFacade] moveStart handler error:', error_); }
+    });
+  };
+
+  private readonly zoomStartDispatcher = () => {
+    this.zoomStartHandlers.forEach(h => {
+      try { h(); } catch (error_) { console.debug('[MapContextFacade] zoomStart handler error:', error_); }
+    });
+  }; 
 
   // Maps to keep track of wrappers for unsubscribe
   private readonly clickHandlerMap: Map<(e: any) => void, (coords: [number, number]) => void> = new Map();
   private readonly moveHandlerMap: Map<() => void, () => void> = new Map();
-  private readonly zoomHandlerMap: Map<() => void, () => void> = new Map(); 
+  private readonly zoomHandlerMap: Map<() => void, () => void> = new Map();
+  private readonly moveStartHandlerMap: Map<() => void, () => void> = new Map();
+  private readonly zoomStartHandlerMap: Map<() => void, () => void> = new Map();
 
   private splitScreenState = {
     left: 'osm' as MapContext | 'calendar',
@@ -251,6 +272,18 @@ export class MapContextFacade {
             try { h(); } catch (error_) { console.debug('[MapContextFacade] zoom handler error:', error_); }
           });
         });
+      }
+
+      // Bind MoveStart handlers (movestart) — attach single dispatcher to renderer
+      try { r.offMapMoveStart?.(this.moveStartDispatcher); } catch (_) { }
+      if (r.onMapMoveStart && this.moveStartHandlers.length > 0) {
+        r.onMapMoveStart(this.moveStartDispatcher);
+      }
+
+      // Bind ZoomStart handlers (zoomstart) — attach single dispatcher to renderer
+      try { r.offMapZoomStart?.(this.zoomStartDispatcher); } catch (_) { }
+      if (r.onMapZoomStart && this.zoomStartHandlers.length > 0) {
+        r.onMapZoomStart(this.zoomStartDispatcher);
       }
     } catch (error_) {
       console.debug('[MapContextFacade] Ignored binding error:', error_);
@@ -630,6 +663,91 @@ export class MapContextFacade {
     }
   }
 
+  // === New renderer proxies: view, projection, size, zoom and layer helpers ===
+  setView(center: GeoPoint | LatLng, zoom: number): void {
+    try {
+      if (this.currentRenderer && typeof (this.currentRenderer as any).setView === 'function') {
+        (this.currentRenderer as any).setView(center, zoom);
+        return;
+      }
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      if (!map) return;
+      if (Array.isArray(center)) map.setView(center, zoom);
+      else map.setView([center.lat, center.lon], zoom);
+    } catch (e) { console.debug('[MapContextFacade] setView failed:', e); }
+  }
+
+  project(latlng: LatLng): { x: number; y: number } {
+    try {
+      if (this.currentRenderer && typeof (this.currentRenderer as any).project === 'function') {
+        return (this.currentRenderer as any).project(latlng);
+      }
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      if (!map || typeof map.project !== 'function') return { x: 0, y: 0 };
+      const p = map.project([latlng[0], latlng[1]]);
+      return { x: p.x, y: p.y };
+    } catch (e) { console.debug('[MapContextFacade] project failed:', e); return { x: 0, y: 0 }; }
+  }
+
+  unproject(point: { x: number; y: number }, zoom?: number): LatLng {
+    try {
+      if (this.currentRenderer && typeof (this.currentRenderer as any).unproject === 'function') {
+        return (this.currentRenderer as any).unproject(point, zoom);
+      }
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      if (!map || typeof map.unproject !== 'function') return [0, 0];
+      const ll = map.unproject({ x: point.x, y: point.y }, zoom);
+      return [ll.lat, ll.lng];
+    } catch (e) { console.debug('[MapContextFacade] unproject failed:', e); return [0, 0]; }
+  }
+
+  getSize(): { x: number; y: number } {
+    try {
+      if (this.currentRenderer && typeof (this.currentRenderer as any).getSize === 'function') {
+        return (this.currentRenderer as any).getSize();
+      }
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      if (!map || typeof map.getSize !== 'function') return { x: 0, y: 0 };
+      const s = map.getSize();
+      return { x: s.x, y: s.y };
+    } catch (e) { console.debug('[MapContextFacade] getSize failed:', e); return { x: 0, y: 0 }; }
+  }
+
+  getZoom(): number {
+    try {
+      if (this.currentRenderer && typeof (this.currentRenderer as any).getZoom === 'function') {
+        return (this.currentRenderer as any).getZoom();
+      }
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      if (!map || typeof map.getZoom !== 'function') return 0;
+      return map.getZoom();
+    } catch (e) { console.debug('[MapContextFacade] getZoom failed:', e); return 0; }
+  }
+
+  eachLayer(fn: (layer: any) => void): void {
+    try {
+      if (this.currentRenderer && typeof (this.currentRenderer as any).eachLayer === 'function') {
+        (this.currentRenderer as any).eachLayer(fn);
+        return;
+      }
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      if (!map || typeof map.eachLayer !== 'function') return;
+      map.eachLayer(fn);
+    } catch (e) { console.debug('[MapContextFacade] eachLayer failed:', e); }
+  }
+
+  removeLayer(layer: any): void {
+    try {
+      if (this.currentRenderer && typeof (this.currentRenderer as any).removeLayer === 'function') {
+        (this.currentRenderer as any).removeLayer(layer);
+        return;
+      }
+      const map: any = (this.currentRenderer as any)?.getMap?.() ?? (this as any).INTERNAL?.api?.map;
+      if (!map || typeof map.removeLayer !== 'function') return;
+      map.removeLayer(layer);
+    } catch (e) { console.debug('[MapContextFacade] removeLayer failed:', e); }
+  }
+
   removeMarker(id: string): void {
     try {
       this.currentRenderer?.removeMarker?.(id);
@@ -808,21 +926,7 @@ export class MapContextFacade {
     } catch (error_) { console.debug('[MapContextFacade] limitBounds error:', error_); }
   }
 
-  /**
-   * Set view to the specified center and zoom. Accepts either GeoPoint or [lat, lon]
-   */
-  setView(center: GeoPoint | [number, number], zoom?: number): void {
-    try {
-      if (Array.isArray(center)) {
-        const gp: GeoPoint = { lat: center[0], lon: center[1] };
-        (this.currentRenderer as any)?.setView?.(gp, zoom ?? 13);
-      } else {
-        (this.currentRenderer as any)?.setView?.(center, zoom ?? 13);
-      }
-    } catch (error_) {
-      console.debug('[MapContextFacade] setView error:', error_);
-    }
-  }
+  
 
   async getEventsForMap(dateRange: DateRange, bounds?: Bounds): Promise<CalendarEvent[]> {
     return this.deps.eventsStore.getEvents?.(dateRange) ?? [];
@@ -1104,6 +1208,84 @@ export class MapContextFacade {
     this.clickHandlerMap.delete(handler as any);
     const idx = this.clickHandlers.indexOf(wrapper as any);
     if (idx >= 0) this.clickHandlers.splice(idx, 1);
+  }
+
+
+
+  // Подписка на начало перемещения карты
+  onMapMoveStart(handler: () => void): void {
+    const wrapper = () => {
+      try { handler(); } catch (e) { /* ignore */ }
+    };
+    this.moveStartHandlers.push(wrapper);
+    this.moveStartHandlerMap.set(handler as any, wrapper);
+    // Ensure renderer has dispatcher attached so our wrapper will be executed exactly once
+    try {
+      const r = this.currentRenderer as any;
+      if (r?.onMapMoveStart) {
+        try { r.offMapMoveStart?.(this.moveStartDispatcher); } catch (_) { }
+        r.onMapMoveStart(this.moveStartDispatcher);
+      }
+    } catch (error_) { console.debug('[MapContextFacade] onMapMoveStart setup failed:', error_); }
+  }
+
+  offMapMoveStart(handler: () => void): void {
+    const wrapper = this.moveStartHandlerMap.get(handler as any);
+    if (!wrapper) return;
+    this.moveStartHandlerMap.delete(handler as any);
+    const idx = this.moveStartHandlers.indexOf(wrapper as any);
+    if (idx >= 0) this.moveStartHandlers.splice(idx, 1);
+    try {
+      const r = this.currentRenderer as any;
+      // If no more handlers remain, detach dispatcher from renderer
+      if (this.moveStartHandlers.length === 0) {
+        try { r?.offMapMoveStart?.(this.moveStartDispatcher); } catch (_) { }
+      }
+    } catch (error_) { console.debug('[MapContextFacade] offMapMoveStart failed:', error_); }
+  }
+
+  // Подписка на начало изменения зума карты
+  onMapZoomStart(handler: () => void): void {
+    const wrapper = () => {
+      try { handler(); } catch (e) { /* ignore */ }
+    };
+    this.zoomStartHandlers.push(wrapper);
+    this.zoomStartHandlerMap.set(handler as any, wrapper);
+    // Ensure renderer has dispatcher attached
+    try {
+      const r = this.currentRenderer as any;
+      if (r?.onMapZoomStart) {
+        try { r.offMapZoomStart?.(this.zoomStartDispatcher); } catch (_) { }
+        r.onMapZoomStart(this.zoomStartDispatcher);
+      }
+    } catch (error_) { console.debug('[MapContextFacade] onMapZoomStart setup failed:', error_); }
+  }
+
+  offMapZoomStart(handler: () => void): void {
+    const wrapper = this.zoomStartHandlerMap.get(handler as any);
+    if (!wrapper) return;
+    this.zoomStartHandlerMap.delete(handler as any);
+    const idx = this.zoomStartHandlers.indexOf(wrapper as any);
+    if (idx >= 0) this.zoomStartHandlers.splice(idx, 1);
+    try {
+      const r = this.currentRenderer as any;
+      if (this.zoomStartHandlers.length === 0) {
+        try { r?.offMapZoomStart?.(this.zoomStartDispatcher); } catch (_) { }
+      }
+    } catch (error_) { console.debug('[MapContextFacade] offMapZoomStart failed:', error_); }
+  }
+
+  // Proxy to flyTo on underlying renderer
+  flyTo(coords: [number, number], zoom?: number, opts?: any): void {
+    try {
+      (this.currentRenderer as any)?.flyTo?.(coords, zoom, opts);
+      return;
+    } catch (e) { /* ignore */ }
+
+    try {
+      const map = (this.currentRenderer as any)?.getMap?.();
+      map?.flyTo?.(coords, zoom, opts);
+    } catch (e) { /* ignore */ }
   }
 }
 
