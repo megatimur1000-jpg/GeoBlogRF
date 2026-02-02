@@ -169,4 +169,42 @@ describe('useMapMarkers', () => {
     unmount();
   });
 
+  it('shows mini popup on mouseover and clears on mouseout', async () => {
+    const mapRef = { current: { eachLayer: () => {} } } as any;
+    const setMini = vi.fn();
+    const realFacade = (await import('../../services/map_facade')).mapFacade();
+    (realFacade as any).getMap = () => mapRef.current;
+
+    render(<TestWrapper
+      mapRef={mapRef}
+      markerClusterGroupRef={{ current: null }}
+      markersData={[{ id: 'm3', latitude: '10', longitude: '20', title: 'T', category: 'other' }]}
+      isDarkMode={false}
+      filters={{ radiusOn: false, radius: 1 }}
+      searchRadiusCenter={[0,0]}
+      mapSettings={{ themeColor: '#000', showHints: true }}
+      openEvents={[]}
+      selectedEvent={null}
+      leftContent={null}
+      rightContent={null}
+      isMapReady={true}
+      setMiniPopup={setMini}
+      setEventMiniPopup={() => {} }
+      setSelectedMarkerIdForPopup={() => {} }
+    />);
+
+    expect(createdMarkers.length).toBeGreaterThan(0);
+    const marker = createdMarkers[0];
+    const handlers = marker.getHandlers();
+
+    // simulate mouseover
+    handlers.mouseover && handlers.mouseover({});
+    expect(setMini).toHaveBeenCalled();
+
+    // simulate mouseout
+    handlers.mouseout && handlers.mouseout({});
+    // ensure cleared (last call sets null)
+    expect(setMini).toHaveBeenLastCalledWith(null);
+  });
+
 });

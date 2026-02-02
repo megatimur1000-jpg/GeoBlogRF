@@ -166,13 +166,10 @@ const MapPage: React.FC<MapPageProps> = ({ selectedMarkerId, showOnlySelected = 
       } as MarkerData));
       setAllMarkers(restoredMarkers);
 
-      // Также повторно передаём в фасад через публичный метод (не используем INTERNAL напрямую)
-      try {
-        mapFacade().updateExternalMarkers(cachedMarkers);
-        console.log('[MapPage] Restored markers passed to facade');
-      } catch (err) {
-        console.warn('[MapPage] Failed passing restored markers to facade:', err);
-      }
+      // Previously we passed restored markers to the facade here. That caused duplicate markers
+      // to be shown when both the facade renderer and the Map component added markers to the map.
+      // To avoid duplicates, we no longer update the facade from this page — Map is the source
+      // of truth for rendering markers via the `markers` prop.
     }
   }, [markersLoaded, cachedMarkers.length]); // Не зависим от allMarkers чтобы избежать циклов
 
@@ -933,16 +930,14 @@ const MapPage: React.FC<MapPageProps> = ({ selectedMarkerId, showOnlySelected = 
   // Используем только отфильтрованные маркеры (без модерации на карте)
   const allMarkersWithModeration = filteredMarkers;
 
-  // Синхронизируем метки с mapFacade (в useEffect чтобы избежать сайд-эффектов в рендере)
-  useEffect(() => {
-    // Передаём только отфильтрованные маркеры для отображения на карте
-    try {
-      mapFacade().updateExternalMarkers(allMarkersWithModeration);
-      console.debug('[MapPage] External markers synchronized to facade:', allMarkersWithModeration.length);
-    } catch (err) {
-      console.warn('[MapPage] Failed to update facade external markers:', err);
-    }
-  }, [allMarkersWithModeration]);
+  // NOTE: Previously we synchronized markers to the facade here via `mapFacade().updateExternalMarkers()`.
+  // That produced duplicate markers in cases where both the facade renderer and the Map component
+  // would add markers to the map (facade.renderMarkers + Map.useMapMarkers). To avoid duplicates
+  // the Map component is now the single source of truth for marker rendering and we do NOT
+  // update the facade here automatically. If external components need to push markers into
+  // the facade for other contexts, they should call `mapFacade().updateExternalMarkers(...)` explicitly.
+  // (intentionally left blank)
+
 
   // Раньше здесь автоматически открывалась левая панель с картой при монтировании
   // страницы, что приводило к нежелательной предзагрузке карты. Оставляем

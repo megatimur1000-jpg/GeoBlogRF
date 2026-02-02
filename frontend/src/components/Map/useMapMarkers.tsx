@@ -96,6 +96,27 @@ export function useMapMarkers(opts: UseMapMarkersOptions) {
             try { leafletMarker.bindTooltip(markerData.title || ''); } catch (e) { }
           }
 
+          // Hover behavior: show mini-popup on mouseover, hide on mouseout
+          leafletMarker.on?.('mouseover', (e: any) => {
+            try {
+              const pos = latLngToContainerPoint(mapFacade(), mapFacade().latLng(lat, lng));
+              setMiniPopup({ marker: markerData, position: { x: pos.x, y: pos.y } });
+            } catch (err) { }
+          });
+
+          leafletMarker.on?.('mouseout', () => {
+            try { setMiniPopup(null); } catch (err) { }
+          });
+
+          // Mobile/tap support: show mini popup on click (but do NOT open full popup)
+          leafletMarker.on?.('click', (e: any) => {
+            try {
+              const pos = latLngToContainerPoint(mapFacade(), mapFacade().latLng(lat, lng));
+              setMiniPopup({ marker: markerData, position: { x: pos.x, y: pos.y } });
+              e?.originalEvent?.stopPropagation?.();
+            } catch (err) { }
+          });
+
           leafletMarker.on?.('popupopen', (e: any) => {
             try {
               const popupEl = e?.popup?.getElement?.();

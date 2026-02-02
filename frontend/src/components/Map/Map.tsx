@@ -1165,6 +1165,112 @@ function Map(props: MapProps) {
     // --- MAP READY CHECK ---
     const isMapReadyCheck = isMapReady || !!mapFacade().getMap?.() || !!((mapFacade() as any)?.INTERNAL?.api?.map);
 
+    // Diagnostic helper (development only): log topmost element in left map area to detect overlays
+    // Enhanced: visually highlight top element and first ancestors so developer sees what blocks the map
+    React.useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
+        try {
+            const highlighted: HTMLElement[] = [];
+            const clearHighlights = () => {
+                while (highlighted.length) {
+                    const e = highlighted.pop();
+                    if (!e) continue;
+                    try { e.style.outline = ''; e.style.outlineOffset = ''; } catch (err) { }
+                }
+            };
+
+            const checkOverlay = () => {
+                clearHighlights();
+                const x = Math.round(window.innerWidth * 0.25);
+                const y = Math.round(window.innerHeight / 2);
+                const el = document.elementFromPoint(x, y) as HTMLElement | null;
+
+                const info = (e: HTMLElement | null) => {
+                    if (!e) return { tag: null };
+                    const cs = window.getComputedStyle(e);
+                    const rect = e.getBoundingClientRect();
+                    return {
+                        tag: e.tagName,
+                        id: e.id || null,
+                        classList: Array.from(e.classList || []),
+                        pointerEvents: cs.pointerEvents,
+                        zIndex: cs.zIndex,
+                        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+                    };
+                };
+
+                console.debug('[Map diagnostics] elementFromPoint at (25%,center):', x, y, info(el));
+
+                if (el) {
+                    // highlight the top element and up to 5 ancestors
+                    let node: HTMLElement | null = el;
+                    let depth = 0;
+                    const chain: any[] = [];
+                    while (node && node !== document.body && node !== document.documentElement && depth < 8) {
+                        chain.push(info(node));
+                        try {
+                            node.style.outline = '3px solid rgba(255,0,0,0.9)';
+                            node.style.outlineOffset = '-2px';
+                            highlighted.push(node);
+                        } catch (err) { }
+                        node = node.parentElement;
+                        depth++;
+                    }
+
+                    console.warn('[Map diagnostics] ancestor chain (top to parents):', chain.map(c => ({ tag: c.tag, classes: c.classList.join(' '), pointerEvents: c.pointerEvents, zIndex: c.zIndex })));
+
+                    // Create or update a floating debug label showing the top element info
+                    try {
+                        let lbl = document.getElementById('map-diagnostics-label') as HTMLDivElement | null;
+                        if (!lbl) {
+                            lbl = document.createElement('div');
+                            lbl.id = 'map-diagnostics-label';
+                            lbl.style.position = 'fixed';
+                            lbl.style.background = 'rgba(0,0,0,0.75)';
+                            lbl.style.color = 'white';
+                            lbl.style.padding = '6px 10px';
+                            lbl.style.fontSize = '12px';
+                            lbl.style.borderRadius = '6px';
+                            lbl.style.zIndex = '999999';
+                            lbl.style.pointerEvents = 'none';
+                            lbl.style.maxWidth = '320px';
+                            lbl.style.fontFamily = 'monospace';
+                            document.body.appendChild(lbl);
+                        }
+                        const topInfo = chain[0];
+                        if (topInfo) {
+                            lbl.textContent = `blocker: ${topInfo.tag} ${topInfo.classList.join(' ')} | ptr: ${topInfo.pointerEvents} | z:${topInfo.zIndex} | ${Math.round(topInfo.rect.width)}x${Math.round(topInfo.rect.height)}`;
+                            lbl.style.left = Math.min(Math.max(8, topInfo.rect.x), window.innerWidth - 330) + 'px';
+                            lbl.style.top = Math.min(Math.max(8, topInfo.rect.y - 30), window.innerHeight - 40) + 'px';
+                        }
+                    } catch (err) { }
+
+                    // Also probe a nearby point to detect invisible overlay differences
+                    try {
+                        const el2 = document.elementFromPoint(Math.min(window.innerWidth - 1, x + 10), y) as HTMLElement | null;
+                        if (el2 && el2 !== el) {
+                            console.warn('[Map diagnostics] different element at offset +10px:', info(el2));
+                            el2.style.outline = '2px dashed rgba(255,165,0,0.9)';
+                            highlighted.push(el2);
+                        }
+                    } catch (err) { }
+                }
+            };
+
+            // run immediately and poll occasionally while map/display may be changing
+            checkOverlay();
+            const intervalId = window.setInterval(checkOverlay, 1500);
+            const onResize = () => { setTimeout(checkOverlay, 120); };
+            window.addEventListener('resize', onResize);
+
+            return () => {
+                clearInterval(intervalId);
+                window.removeEventListener('resize', onResize);
+                clearHighlights();
+            };
+        } catch (err) { console.debug('[Map diagnostics] failed', err); }
+    }, [isMapReady, leftContent, rightContent]);
+
     // --- SELECTED MARKER POPUP ---
     const selectedMarkerPopup = useMemo(() => {
         if (!selectedMarkerIdForPopup) return null;
