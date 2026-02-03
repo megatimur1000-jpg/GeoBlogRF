@@ -1,0 +1,150 @@
+/* _content.css — Контент-специфичные стили: posts, blogs, посты и списки контента
+   Перенесено из PageLayout.css (posts-mode и связанные селекторы)
+*/
+
+/* POSTS MODE: статичный glass-контейнер + область скролла */
+.page-container.posts-mode .page-main-panel {
+  position: absolute !important;
+  top: 0 !important;
+  overflow: hidden !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+
+  /* GLASSMORPHISM (ограниченный) */
+  background: rgba(255, 255, 255, 0.2) !important;
+  -webkit-backdrop-filter: none !important; /* временно отключено */
+  backdrop-filter: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Ограниченный эффект размытия: небольшая градиентная накладка внизу */
+.page-container.posts-mode .posts-scroll-area {
+  position: relative !important;
+}
+.page-container.posts-mode .posts-scroll-area::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2cm; /* строго указанная зона */
+  pointer-events: none;
+  z-index: 15;
+  background: linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+
+/* Быстрый выключатель для разработки: добавить класс на body чтобы полностью убрать эффект */
+body.disable-posts-blur .page-container.posts-mode .page-main-panel {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  filter: none !important;
+}
+body.disable-posts-blur .page-container.posts-mode .posts-scroll-area::after {
+  display: none !important;
+}
+body.disable-posts-blur .page-container.posts-mode,
+body.disable-posts-blur .page-container.posts-mode * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  filter: none !important;
+  background-image: none !important;
+}
+
+/* Статичный заголовок (не скроллится) */
+.posts-static-header {
+  position: relative !important;
+  flex-shrink: 0 !important;
+  padding: 16px 20px 12px 20px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  background: transparent !important;
+  z-index: 10 !important;
+}
+
+/* Скролльная область постов */
+.posts-scroll-area {
+  flex: 1 !important;
+  position: relative !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 12px 16px 30px 16px !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.posts-scroll-area::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.posts-scroll-area .posts-content-centered {
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  padding-bottom: 20px !important;
+}
+
+/* Элементы постов */
+.post-item,
+.posts-scroll-area .space-y-4>div {
+  margin-bottom: 16px !important;
+  padding: 16px !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s ease !important;
+}
+.post-item:hover,
+.posts-scroll-area .space-y-4>div:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Текст и контент внутри постов */
+.posts-scroll-area h2,
+.posts-scroll-area h3,
+.posts-scroll-area .text-xl,
+.posts-scroll-area .text-lg,
+.posts-scroll-area .font-bold,
+.posts-scroll-area .font-semibold {
+  color: #1a1a2e !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+.posts-scroll-area p,
+.posts-scroll-area .text-gray-600,
+.posts-scroll-area .text-gray-700,
+.posts-scroll-area .text-sm {
+  color: #2d2d44 !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+.posts-scroll-area .text-gray-500,
+.posts-scroll-area .text-xs {
+  color: #4a4a6a !important;
+}
+
+.posts-static-header h1 {
+  color: #1a1a2e !important;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
+}
+.posts-static-header button,
+.posts-static-header .btn {
+  text-shadow: none !important;
+}

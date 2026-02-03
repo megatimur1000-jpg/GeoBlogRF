@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { FilterLogic } from '../components/HashtagFilter';
 import { MarkerData } from '../types/marker';
 import { projectManager } from '../services/projectManager';
@@ -33,7 +34,6 @@ import { useGuest } from '../contexts/GuestContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllZones, checkPoint } from '../services/zoneService';
 import { getDistanceFromLatLonInKm } from '../utils/russiaBounds';
-import '../styles/GlobalStyles.css';
 import '../styles/PageLayout.css';
 import '../styles/PersistentMap.css';
 import AdminModerationModal from '../components/Moderation/AdminModerationModal';
@@ -67,6 +67,20 @@ const MapPage: React.FC<MapPageProps> = ({ selectedMarkerId, showOnlySelected = 
   // Реф для контейнера карты
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const { registerPanel, unregisterPanel } = usePanelRegistration();
+
+  // Portal root for facade map (ensures map renders at document.body and is not clipped by page layout)
+  const [facadeMapRootEl] = useState<HTMLElement | null>(() => {
+    if (typeof document !== 'undefined') {
+      let el = document.getElementById('facade-map-root') as HTMLElement | null;
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'facade-map-root';
+        document.body.appendChild(el);
+      }
+      return el;
+    }
+    return null;
+  });
   const guest = useGuest();
   const auth = useAuth();
   const isGuest = !auth?.user;
@@ -1099,84 +1113,87 @@ const MapPage: React.FC<MapPageProps> = ({ selectedMarkerId, showOnlySelected = 
               )
             }
 
-            {/* Область карты */}
-            <MapContainer className="facade-map-root map-area">
-              {/* Кнопки управления по бокам карты - в однооконном режиме внутри MapContainer */}
-              {!isTwoPanelMode && (
-                <MapActionButtons
-                  onSettingsClick={() => setSettingsOpen(true)}
+            {/* Область карты (рендерим в portal, чтобы избежать обрезания родительскими панелями) */}
+            {typeof document !== 'undefined' && facadeMapRootEl && ReactDOM.createPortal(
+              <MapContainer className="facade-map-root map-area">
+                {/* Кнопки управления по бокам карты - в однооконном режиме внутри MapContainer */}
+                {!isTwoPanelMode && (
+                  <MapActionButtons
+                    onSettingsClick={() => setSettingsOpen(true)}
+                    onFavoritesClick={() => {
+                      if (process.env.NODE_ENV === 'development') {
+                      }
+                      setFavoritesOpen(true);
+                    }}
+                    favoritesCount={favoritesCount}
+                    onLegendClick={() => setLegendOpen(true)}
+                    onAddMarkerClick={() => setIsAddingMarkerMode(true)}
+                    isAddingMarkerMode={isAddingMarkerMode}
+                    onRecordTrackClick={handleRecordTrackClick}
+                    isRecording={isRecording}
+                    isTwoPanelMode={isTwoPanelMode}
+                  />
+                )}
+
+                {/* Кнопка "Избранное" теперь в компоненте Map */}
+
+                {/* Индикатор загрузки геолокации убран - геолокация работает в фоне, не блокирует карту */}
+
+                {useLazyLoading && lazyLoading && (
+                  <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg px-4 py-2 flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span className="text-sm text-gray-600">Загрузка маркеров...</span>
+                  </div>
+                )}
+
+                {/* Информация о местоположении */}
+
+                {/* Сообщение об ошибке геолокации - убрано, геолокация опциональна */}
+                {/* Карта работает с дефолтным местоположением (Москва) без показа ошибок */}
+
+                <MapComponent
+                  center={center}
+                  zoom={zoom}
+                  radius={appliedFilters.radius}
+                  markers={allMarkersWithModeration}
+                  onHashtagClickFromPopup={handleHashtagClickFromPopup}
+                  flyToCoordinates={flyToCoordinates}
+                  selectedMarkerIdForPopup={selectedMarkerIdForPopup}
+                  setSelectedMarkerIdForPopup={setSelectedMarkerIdForPopup}
+                  onAddToFavorites={addToFavorites}
+                  onRemoveFromFavorites={(id: string) => {
+                    try { (favoritesContext as any)?.removeFavoritePlace?.(id); } catch (e) { }
+                  }}
+                  setSelectedMarkerIds={(ids: string[]) => {
+                    try { setSelectedMarkerIds(Array.isArray(ids) ? ids : []); } catch (e) { }
+                  }}
                   onFavoritesClick={() => {
                     if (process.env.NODE_ENV === 'development') {
                     }
                     setFavoritesOpen(true);
                   }}
                   favoritesCount={favoritesCount}
-                  onLegendClick={() => setLegendOpen(true)}
-                  onAddMarkerClick={() => setIsAddingMarkerMode(true)}
+                  isFavorite={marker => {
+                    const isFav = favorites.some((m: { id: string; }) => m.id === marker.id);
+                    return isFav;
+                  }}
+                  mapSettings={appliedMapSettings}
+                  zones={showZonesLayer ? zones : []}
+                  filters={appliedFilters}
+                  searchRadiusCenter={searchRadiusCenter}
+                  onSearchRadiusCenterChange={setSearchRadiusCenter}
+                  selectedMarkerIds={selectedMarkerIds}
+                  onAddToBlog={handleAddMarkerToBlog}
+                  onBoundsChange={handleMapBoundsChange}
+                  routeData={routeData}
                   isAddingMarkerMode={isAddingMarkerMode}
-                  onRecordTrackClick={handleRecordTrackClick}
-                  isRecording={isRecording}
-                  isTwoPanelMode={isTwoPanelMode}
+                  onAddMarkerModeChange={setIsAddingMarkerMode}
+                  legendOpen={legendOpen}
+                  onLegendOpenChange={setLegendOpen}
                 />
-              )}
-
-              {/* Кнопка "Избранное" теперь в компоненте Map */}
-
-              {/* Индикатор загрузки геолокации убран - геолокация работает в фоне, не блокирует карту */}
-
-              {useLazyLoading && lazyLoading && (
-                <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg px-4 py-2 flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm text-gray-600">Загрузка маркеров...</span>
-                </div>
-              )}
-
-              {/* Информация о местоположении */}
-
-              {/* Сообщение об ошибке геолокации - убрано, геолокация опциональна */}
-              {/* Карта работает с дефолтным местоположением (Москва) без показа ошибок */}
-
-              <MapComponent
-                center={center}
-                zoom={zoom}
-                radius={appliedFilters.radius}
-                markers={allMarkersWithModeration}
-                onHashtagClickFromPopup={handleHashtagClickFromPopup}
-                flyToCoordinates={flyToCoordinates}
-                selectedMarkerIdForPopup={selectedMarkerIdForPopup}
-                setSelectedMarkerIdForPopup={setSelectedMarkerIdForPopup}
-                onAddToFavorites={addToFavorites}
-                onRemoveFromFavorites={(id: string) => {
-                  try { (favoritesContext as any)?.removeFavoritePlace?.(id); } catch (e) { }
-                }}
-                setSelectedMarkerIds={(ids: string[]) => {
-                  try { setSelectedMarkerIds(Array.isArray(ids) ? ids : []); } catch (e) { }
-                }}
-                onFavoritesClick={() => {
-                  if (process.env.NODE_ENV === 'development') {
-                  }
-                  setFavoritesOpen(true);
-                }}
-                favoritesCount={favoritesCount}
-                isFavorite={marker => {
-                  const isFav = favorites.some((m: { id: string; }) => m.id === marker.id);
-                  return isFav;
-                }}
-                mapSettings={appliedMapSettings}
-                zones={showZonesLayer ? zones : []}
-                filters={appliedFilters}
-                searchRadiusCenter={searchRadiusCenter}
-                onSearchRadiusCenterChange={setSearchRadiusCenter}
-                selectedMarkerIds={selectedMarkerIds}
-                onAddToBlog={handleAddMarkerToBlog}
-                onBoundsChange={handleMapBoundsChange}
-                routeData={routeData}
-                isAddingMarkerMode={isAddingMarkerMode}
-                onAddMarkerModeChange={setIsAddingMarkerMode}
-                legendOpen={legendOpen}
-                onLegendOpenChange={setLegendOpen}
-              />
-            </MapContainer>
+              </MapContainer>,
+              facadeMapRootEl
+            )}
 
             {/* Левая выдвигающаяся панель с настройками */}
             {/* Левая панель настроек в стиле стекла */}

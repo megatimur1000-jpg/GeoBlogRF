@@ -62,3 +62,28 @@
   background: rgba(10,12,16,0.32);
   border: 1px solid rgba(255,255,255,0.06);
 }
+
+/* Dev helper: bring map to front and disable overlays when body.map-debug-mode (used by devMapDebug) */
+body.map-debug-mode .page-overlay,
+body.map-debug-mode .overlay,
+body.map-debug-mode .chat-overlay,
+body.map-debug-mode .page-slide-panel,
+body.map-debug-mode .page-slide-panel.open,
+body.map-debug-mode .page-slide-panel.right.open,
+body.map-debug-mode .page-slide-panel.left.open {
+  pointer-events: none !important;
+  opacity: 0.32 !important;
+}
+
+body.map-debug-mode .page-side-button.right,
+body.map-debug-mode .fixed.right-4,
+body.map-debug-mode .page-side-buttons.right {
+  display: none !important;
+}
+
+body.map-debug-mode .facade-map-root {
+  z-index: 2147483647 !important; /* bring to front */
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+}

@@ -39,6 +39,7 @@ import { FEATURES } from '../../config/features';
 import { getDistanceFromLatLonInKm } from '../../utils/russiaBounds';
 import { getMarkerIconPath, getCategoryColor, getFontAwesomeIconName } from '../../constants/markerCategories';
 import { mapFacade, INTERNAL } from '../../services/map_facade/index';
+import { initMapDebug } from '../../utils/devMapDebug';
 import type { MapConfig } from '../../services/map_facade/index';
 import { useMapStateStore } from '../../stores/mapStateStore';
 import { useEventsStore, EventsState } from '../../stores/eventsStore';
@@ -253,6 +254,12 @@ const Map: React.FC<MapProps> = ({
             }
         }
     }, [leftContent, portalEl]);
+
+    // Dev helper: add a debug toggle to disable overlays and bring map forward for inspection
+    useEffect(() => {
+      const cleanup = initMapDebug?.();
+      return () => { try { cleanup && cleanup(); } catch (e) {} };
+    }, []);
 
     // --- FACADE MAP TOP OFFSET ---
     const mapDisplayMode = useMapDisplayMode();

@@ -27,6 +27,39 @@
   min-height: 100vh !important;
 }
 
+/* Blog page: narrow edge blur strips (2cm) at left and right, full height, pointer-events none */
+.page-container.blog-page::before,
+.page-container.blog-page::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 2cm;
+  pointer-events: none; /* allow clicks through */
+  z-index: 5; /* above map but below main panel */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.55);
+}
+
+.page-container.blog-page::before { left: 0; }
+.page-container.blog-page::after { right: 0; }
+
+/* Make the map non-interactive while posts panel is active, but keep the panel interactive */
+.page-container.blog-page .facade-map-root {
+  pointer-events: none; /* map visible but non-interactive */
+}
+
+.page-container.blog-page .page-main-panel {
+  pointer-events: auto; /* allow interactions with posts panel */
+}
+
+@media (max-width: 768px) {
+  /* On small screens make the strips smaller so they don't consume too much space */
+  .page-container.blog-page::before,
+  .page-container.blog-page::after { width: 1rem; }
+}
+
 /* Для map-mode - переопределяем все ограничения для полного экрана */
 .page-layout-container.map-mode {
   height: 100vh !important;
@@ -102,6 +135,12 @@
   overflow: hidden !important;
   border: 1px solid rgba(255, 255, 255, 0.3);
   flex: 1;
+}
+
+/* For blog page we prefer narrow edge blur strips instead of full panel blur so inspector clicks work */
+.page-container.blog-page .page-main-panel {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* ===== КНОПКИ УПРАВЛЕНИЯ ===== */
@@ -1205,189 +1244,8 @@
   overflow: visible !important;
 }
 
-/* Главная панель - GLASSMORPHISM контейнер (СТАТИЧНЫЙ!) */
-.page-container.posts-mode .page-main-panel {
-  /* Занимает всё пространство page-main-area */
-  position: absolute !important;
-  top: 0 !important;
-  /* КРИТИЧНО: контейнер НЕ скроллится, скроллится только .posts-scroll-area внутри */
-  overflow: hidden !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-
-  /* GLASSMORPHISM */
-  background: rgba(255, 255, 255, 0.2) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  border-radius: 20px !important;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-
-  /* FLEXBOX для статичного заголовка и скролла */
-  display: flex !important;
-  flex-direction: column !important;
-
-  /* Скрываем скролл */
-  overflow: hidden !important;
-}
-
-/* Двухоконный режим - glassmorphism контейнер занимает всё доступное пространство */
-.has-left-panel .page-container.posts-mode .page-main-panel,
-.activity-feed.has-left-panel .page-container.posts-mode .page-main-panel {
-  /* Позиционирование задаётся родительским контейнером в MainLayout */
-  position: absolute !important;
-  left: 0 !important;
-  right: 0 !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* Внутренний контейнер постов в двухоконном режиме */
-.has-left-panel .posts-inner-container,
-.activity-feed.has-left-panel .posts-inner-container {
-  left: 0 !important;
-  right: 0 !important;
-  top: 0 !important;
-  bottom: 0 !important;
-}
-
-.page-container.posts-mode .page-main-area {
-  height: 100% !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-.page-container.posts-mode .page-content-wrapper {
-  height: 100% !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* ===== СТАТИЧНЫЙ ЗАГОЛОВОК (НЕ СКРОЛЛИТСЯ) ===== */
-
-.posts-static-header {
-  /* Фиксированная позиция внутри контейнера */
-  position: relative !important;
-  flex-shrink: 0 !important;
-
-  /* Отступы */
-  padding: 16px 20px 12px 20px !important;
-  margin: 0 !important;
-
-  /* Нижняя граница */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
-
-  /* Фон для отделения от скролла */
-  background: transparent !important;
-
-  /* Z-index чтобы был над скроллом */
-  z-index: 10 !important;
-}
-
-/* ===== СКРОЛЛЬНАЯ ОБЛАСТЬ (ТОЛЬКО ПОСТЫ) ===== */
-
-.posts-scroll-area {
-  /* Занимает оставшееся пространство */
-  flex: 1 !important;
-  position: relative !important;
-
-  /* Скрытая прокрутка - можно скроллить колёсиком, но полоса не видна */
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-
-  /* Отступы от краёв glassmorphism контейнера */
-  /* ВАЖНО: padding-bottom 30px (~8mm) чтобы контент не доходил до нижнего края стекла */
-  padding: 12px 16px 30px 16px !important;
-
-  /* Скрываем полосу прокрутки */
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-.posts-scroll-area::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-/* Центрируем контент постов внутри скролла */
-.posts-scroll-area .posts-content-centered {
-  max-width: 900px !important;
-  margin: 0 auto !important;
-  padding: 0 !important;
-  /* Отступ снизу чтобы контент не доходил до края стекла на 20px (~5mm) */
-  padding-bottom: 20px !important;
-}
-
-/* ===== СТИЛИ ДЛЯ ЭЛЕМЕНТОВ ПОСТОВ ===== */
-/* Чистый белый фон без синеватого оттенка */
-.post-item,
-.posts-scroll-area .space-y-4>div {
-  margin-bottom: 16px !important;
-  padding: 16px !important;
-  border-radius: 12px !important;
-  /* Чистый белый фон без blur эффекта */
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
-  transition: all 0.2s ease !important;
-}
-
-.post-item:hover,
-.posts-scroll-area .space-y-4>div:hover {
-  background: rgba(255, 255, 255, 1) !important;
-  border-color: rgba(0, 0, 0, 0.12) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* ===== УЛУЧШЕННАЯ КОНТРАСТНОСТЬ ТЕКСТА ===== */
-/* Заголовки постов */
-.posts-scroll-area h2,
-.posts-scroll-area h3,
-.posts-scroll-area .text-xl,
-.posts-scroll-area .text-lg,
-.posts-scroll-area .font-bold,
-.posts-scroll-area .font-semibold {
-  color: #1a1a2e !important;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
-}
-
-/* Основной текст постов */
-.posts-scroll-area p,
-.posts-scroll-area .text-gray-600,
-.posts-scroll-area .text-gray-700,
-.posts-scroll-area .text-sm {
-  color: #2d2d44 !important;
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
-}
-
-/* Мета-информация (дата, автор) */
-.posts-scroll-area .text-gray-500,
-.posts-scroll-area .text-xs {
-  color: #4a4a6a !important;
-}
-
-/* Статичный заголовок - улучшенная контрастность */
-.posts-static-header h1 {
-  color: #1a1a2e !important;
-  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
-}
-
-.posts-static-header button,
-.posts-static-header .btn {
-  text-shadow: none !important;
-}
+/* Posts/blog styles migrated to `./_content.css` */
+/* See `frontend/src/styles/_content.css` for authoritative content styles */
 
 /* Также скрываем скролл на page-main-panel */
 .page-container.posts-mode .page-main-panel>div,
@@ -1456,8 +1314,9 @@
 
   /* Glassmorphism эффект */
   background: rgba(255, 255, 255, 0.18) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
+  /* Temporarily disable heavy blur to avoid page-wide effect */
+  -webkit-backdrop-filter: none !important;   /* disabled temporarily */
+  backdrop-filter: none !important;           /* disabled temporarily */
 
   /* Скруглённые углы */
   border-radius: 20px !important;

@@ -1,3 +1,4 @@
+/* DEPRECATED: Legacy global styles. Prefer modular imports from `styles/index.css` (/_base, _components, _layout, _modes). */
 /* Глобальные стили для всех страниц с единым дизайном как в чате */
 
 /* 🎨 НОВЫЙ СТИЛЬ - Прозрачный фон, картографические паттерны через MapBackground.css */
@@ -456,36 +457,9 @@ html, body, #root {
   border-radius: 14px !important;
 }
 
-/* 
- * POSTS MODE: контейнер с отступом 60px (~15mm) снизу от экрана
- * Это создаёт эффект "оторванности" от нижней границы
- */
-.page-layout-container.posts-mode {
-  height: calc(100vh - 64px - 60px) !important;
-  min-height: calc(100vh - 64px - 60px) !important;
-  max-height: calc(100vh - 64px - 60px) !important;
-  margin-bottom: 60px !important;
-  background: transparent !important;
-}
+/* POSTS MODE: (migrated to PageLayout.css) — see `frontend/src/styles/PageLayout.css` for canonical posts layout and glass rules. */
 
-/* End overrides */
-
-/* Glass style specifically for posts panel */
-.posts-glass {
-  /* lighter glass so map gradient shows through */
-  background: rgba(255, 255, 255, 0.06) !important;
-  background-image: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)) !important;
-  backdrop-filter: blur(14px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
-  border-radius: 14px !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
-  box-shadow: 0 12px 34px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.03) !important;
-  padding: 14px !important;
-}
-
-.posts-glass .page-body {
-  background: transparent !important;
-}
+/* posts glass styling moved to PageLayout.css (posts-mode) — keep content styles canonical there. */
 
 /* ВНУТРЕННИЕ ЭЛЕМЕНТЫ КАРТЫ - ПРОСТЫЕ СТИЛИ */
 .map-card {
@@ -1140,50 +1114,4 @@ html, body, #root {
   background-color: #f0f0f0 !important;
 } 
 
-/* ======== MAP STYLES ======== */
-
-/* Глобальные стили для карты */
-.facade-map-root {
-  position: fixed !important;
-  top: var(--facade-map-top, 0px);
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: calc(100vh - var(--facade-map-top, 0px)) !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  z-index: 0;
-  overflow: visible !important;
-  pointer-events: auto;
-  transition: all 0.3s ease;
-}
-
-/* Двухоконный режим */
-.facade-map-root.two-panel-mode {
-  width: 100% !important;
-  height: calc(100vh - var(--facade-map-top, 0px)) !important;
-}
-
-.facade-map-root.two-panel-mode .leaflet-container {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* Однооконный режим (полный экран) */
-.facade-map-root.single-panel-mode {
-  width: 100vw !important;
-  height: calc(100vh - var(--facade-map-top, 0px)) !important;
-}
-
-.facade-map-root.single-panel-mode .leaflet-container {
-  width: 100vw !important;
-  height: calc(100vh - var(--facade-map-top, 0px)) !important;
-}
-
-/* Режим когда карта скрыта (только Posts + Activity) */
-.facade-map-root.map-hidden {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-} 
+/* MAP STYLE: moved to `PersistentMap.css` and `_modes.css` — keep facade modifiers and dev rules there for single source of truth. */

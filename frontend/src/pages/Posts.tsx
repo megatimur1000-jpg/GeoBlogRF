@@ -6,7 +6,6 @@ import PageLayout from '../components/PageLayout';
 import { listPosts, createPost, PostDTO, toggleReaction } from '../services/postsService';
 import { FaPlus, FaCog, FaEdit, FaFileAlt, FaCloud, FaTimes } from 'react-icons/fa';
 import { useContentStore } from '../stores/contentStore';
-import '../styles/GlobalStyles.css';
 import '../styles/PageLayout.css';
 import CreatePostModal from '../components/Posts/CreatePostModal';
 import PostCard from '../components/Posts/PostCard';
