@@ -988,8 +988,9 @@ const Map: React.FC<MapProps> = ({
                     autoPan: true,
                     autoPanPadding: [50, 50],
                     closeButton: false,
-                    maxWidth: 441,
-                    maxHeight: 312,
+                    maxWidth: 600,
+                    minWidth: 205,
+                    maxHeight: 400,
                     offset: mapFacade().point(0, -10),
                 };
 
@@ -997,6 +998,23 @@ const Map: React.FC<MapProps> = ({
 
                 leafletMarker.on('popupopen', (e: any) => {
                     try {
+                        // Сбрасываем inline-стили Leaflet на wrapper и content
+                        const popupEl = e.popup?.getElement();
+                        if (popupEl) {
+                            const wrapper = popupEl.querySelector('.leaflet-popup-content-wrapper');
+                            if (wrapper) {
+                                wrapper.style.cssText = 'background:transparent;box-shadow:none;padding:0;border:none;border-radius:0;overflow:visible;';
+                            }
+                            const content = popupEl.querySelector('.leaflet-popup-content');
+                            if (content) {
+                                content.style.cssText = 'margin:0;padding:0;width:auto;overflow:visible;';
+                            }
+                            const tipContainer = popupEl.querySelector('.leaflet-popup-tip-container');
+                            if (tipContainer) {
+                                (tipContainer as HTMLElement).style.display = 'none';
+                            }
+                        }
+
                         if (!mapRef.current) {
                             setTimeout(() => {
                                 if (leafletMarker.getPopup() && leafletMarker.isPopupOpen()) {
@@ -1038,8 +1056,9 @@ const Map: React.FC<MapProps> = ({
                         }
 
                         const fullMarkerData: MarkerData = markerData;
-                        const isSelected = !!(selectedMarkerIdForPopup && selectedMarkerIdForPopup === markerData.id);
-                        const shouldShowSelected = isSelected && isFavorite(markerData) && Array.isArray(selectedMarkerIds) && selectedMarkerIds.includes(markerData.id);
+                        const isMarkerFav = isFavorite(markerData);
+                        const isInSelectedList = Array.isArray(selectedMarkerIds) && selectedMarkerIds.includes(markerData.id);
+                        const shouldShowSelected = isMarkerFav && isInSelectedList;
 
                         if (shouldShowSelected) {
                             popupElement.classList.add('selected');

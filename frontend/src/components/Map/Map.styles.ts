@@ -288,6 +288,18 @@ export const PopupContainer = styled.div`
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   border: 2px solid #ffffff; /* Белая рамка для стандартного попапа */
   border-radius: 8px;
+
+  /* Оранжевая рамка для выбранных (избранных) маркеров */
+  .selected > & {
+    border: 2px solid #ff9800;
+    box-shadow: 0 0 12px 2px #ff9800, 0 0 20px 4px rgba(255, 152, 0, 0.3);
+    animation: popupSelectedGlow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes popupSelectedGlow {
+    from { box-shadow: 0 0 12px 2px #ff9800, 0 0 20px 4px rgba(255, 152, 0, 0.3); }
+    to { box-shadow: 0 0 16px 3px #ff9800, 0 0 30px 6px rgba(255, 152, 0, 0.5); }
+  }
 `;
 
 export const CloseButton = styled.button`
