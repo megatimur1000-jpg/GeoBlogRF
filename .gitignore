@@ -33,3 +33,8 @@ frontend/tsconfig.tsbuildinfo
 
 # Exclude accidental test folders
 /frontend/Не выкладывать в репозиторий!!!/
+# Exclude example folders sent by user
+/Только для примера/
+/frontend/Только промты!!!!/
+/Только промты!!!!/
+/Только для примера/frontend/Только промты!!!!/
