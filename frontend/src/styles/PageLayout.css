@@ -1044,6 +1044,8 @@
   margin: 0;
   top: 0;
   left: 0;
+  /* Карта рендерится в portal на body — этот контейнер прозрачный для кликов */
+  pointer-events: none;
 }
 
 .page-container.map-mode .page-main-area {

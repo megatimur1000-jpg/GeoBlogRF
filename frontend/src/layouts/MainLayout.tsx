@@ -183,7 +183,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             // Сайдбар имеет zIndex = 1150, карта должна быть ниже для морфизма
             zIndex: leftContent === 'map' || leftContent === 'planner' ? 1140 : (leftContent ? 1160 : 0),
             overflow: 'visible',
-            pointerEvents: leftContent ? 'auto' : 'none',
+            // В map-mode карта рендерится через portal на body — этот контейнер
+            // должен пропускать клики (pointer-events: none), чтобы Leaflet получал события.
+            // Для planner и прочего контент рендерится внутри, поэтому auto.
+            pointerEvents: leftContent === 'map' ? 'none' : (leftContent ? 'auto' : 'none'),
           }}
         >
           <PageLayer side="left" />
