@@ -473,24 +473,19 @@ export const SearchBarContainer = styled.div`
 `;
 
 export const GlobalMarkerStyles = styled.div`
+  /* Каплевидные маркеры — стили задаются inline в createMarkerIconHTML */
   .marker-icon, .marker-base {
-    width: 30px !important;
-    height: 30px !important;
-    border-radius: 50% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     padding: 0 !important;
     margin: 0 !important;
     box-sizing: border-box !important;
-    background: inherit !important;
-    border: 2px solid #fff !important;
   }
-  .marker-icon i,
-  .marker-base i {
-    color: white !important;
-    font-size: 1.3em !important;
-    line-height: 1 !important;
+  /* Сброс дефолтных стилей Leaflet для div-icon (белый фон, бордер) */
+  .leaflet-div-icon {
+    background: transparent !important;
+    border: none !important;
   }
   .marker-user-poi {
     border: 2px solid #e67e22;
@@ -596,10 +591,30 @@ export const GlobalLeafletPopupStyles = styled.div`
   .leaflet-popup-content-wrapper {
     border-radius: 8px !important;
   }
-  
   .leaflet-popup-tip {
     border-radius: 2px;
   }
+
+  /* Кастомный попап маркера — убираем Leaflet-хром, чтобы MarkerPopup рендерился без двойной рамки */
+  .custom-marker-popup .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .custom-marker-popup .leaflet-popup-tip-container {
+    display: none !important;
+  }
+  .custom-marker-popup .leaflet-popup-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+  }
+  .custom-marker-popup .leaflet-popup-close-button {
+    display: none !important;
+  }
+
   /* Убедимся, что элементы управления Leaflet отображаются поверх стеклянных панелей */
   .leaflet-control {
     z-index: 1300 !important;

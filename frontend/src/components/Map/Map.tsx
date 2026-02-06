@@ -16,7 +16,7 @@ declare const L: any;
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useMapStyle } from '../../hooks/useMapStyle';
-import { MapContainer, MapWrapper, LoadingOverlay, ErrorMessage, GlobalLeafletPopupStyles } from './Map.styles';
+import { MapContainer, MapWrapper, LoadingOverlay, ErrorMessage, GlobalLeafletPopupStyles, GlobalMarkerStyles } from './Map.styles';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { createPortal } from 'react-dom';
@@ -52,7 +52,8 @@ import {
     getAdditionalLayers,
     createLayerIndicator,
     markerCategoryStyles,
-    latLngToContainerPoint
+    latLngToContainerPoint,
+    createMarkerIconHTML
 } from './mapUtils';
 
 const MapMessage = styled.div`
@@ -228,6 +229,7 @@ const Map: React.FC<MapProps> = ({
     const [miniPopup, setMiniPopup] = useState<{
         marker: MarkerData;
         position: { x: number; y: number };
+        layer?: any;
     } | null>(null);
     const [eventMiniPopup, setEventMiniPopup] = useState<{
         event: MockEvent;
@@ -969,17 +971,16 @@ const Map: React.FC<MapProps> = ({
                     return;
                 }
 
-                const img = new Image();
-                img.onerror = () => {
-                    const divIcon = mapFacade().createDivIcon({
-                        className: `marker-icon marker-category-${markerCategory}${isHot ? ' marker-hot' : ''}`,
-                        html: `<div class="marker-base" style="background-color: ${iconColor};"><i class="fas ${faIconName}"></i></div>`,
-                        iconSize: [iconWidth, iconHeight],
-                        iconAnchor: [iconWidth / 2, iconHeight],
-                    });
-                    try { leafletMarker.setIcon(divIcon); } catch (err) { console.debug('[Map] setIcon failed on fallback divIcon:', err); }
-                };
-                img.src = markerIconUrl;
+                // PNG иконки не существуют — сразу используем каплевидные HTML-маркеры
+                const teardropSize = Math.max(iconWidth, iconHeight);
+                const divIcon = mapFacade().createDivIcon({
+                    className: `marker-category-${markerCategory}${isHot ? ' marker-hot' : ''}${isPending ? ' marker-pending' : ''}`,
+                    html: createMarkerIconHTML(markerCategory, iconColor, teardropSize),
+                    iconSize: [teardropSize, teardropSize],
+                    iconAnchor: [teardropSize / 2, teardropSize],
+                    popupAnchor: [0, -teardropSize],
+                });
+                try { leafletMarker.setIcon(divIcon); } catch (err) { console.debug('[Map] setIcon failed on divIcon:', err); }
                 try { (leafletMarker as any).markerData = markerData; } catch (err) { console.debug('[Map] Failed to set markerData on leafletMarker:', err); }
 
                 const popupOptions = {
@@ -1085,14 +1086,16 @@ const Map: React.FC<MapProps> = ({
                 leafletMarker.on('mouseover', () => {
                     setMiniPopup({
                         marker: markerData,
-                        position: latLngToContainerPoint(mapFacade(), mapFacade().latLng(Number(markerData.latitude), Number(markerData.longitude)))
+                        position: latLngToContainerPoint(mapFacade(), mapFacade().latLng(Number(markerData.latitude), Number(markerData.longitude))),
+                        layer: leafletMarker
                     });
                 });
 
                 leafletMarker.on('click', (e: any) => {
                     e.originalEvent.stopPropagation();
                     setMiniPopup(null);
-                    setSelectedMarkerIdForPopup(markerData.id);
+                    // Открываем Leaflet-попап (MarkerPopup рендерится в popupopen handler)
+                    leafletMarker.openPopup();
                 });
 
                 if (showHints) {
@@ -1625,10 +1628,10 @@ const Map: React.FC<MapProps> = ({
             <MiniMarkerPopup
                 marker={miniPopup.marker}
                 onOpenFull={() => {
-                    const markerId = miniPopup?.marker?.id;
+                    const layer = miniPopup?.layer;
                     setMiniPopup(null);
-                    if (markerId) {
-                        setSelectedMarkerIdForPopup(markerId);
+                    if (layer && typeof layer.openPopup === 'function') {
+                        layer.openPopup();
                     }
                 }}
                 isSelected={false}
@@ -1660,7 +1663,14 @@ const Map: React.FC<MapProps> = ({
                     marker={marker}
                     onOpenFull={() => {
                         setMiniPopup(null);
-                        setSelectedMarkerIdForPopup(markerId);
+                        // Ищем слой маркера в кластере и открываем Leaflet-попап
+                        if (markerClusterGroupRef.current) {
+                            markerClusterGroupRef.current.eachLayer((layer: any) => {
+                                if (layer.markerData && String(layer.markerData.id) === markerId) {
+                                    layer.openPopup();
+                                }
+                            });
+                        }
                     }}
                     isSelected={true}
                 />
@@ -1677,6 +1687,7 @@ const Map: React.FC<MapProps> = ({
                 </div>
             )}
             <GlobalLeafletPopupStyles />
+            <GlobalMarkerStyles />
 
             <MapWrapper
                 id="map"
@@ -1773,7 +1784,7 @@ const Map: React.FC<MapProps> = ({
                     />
                 )}
 
-                {selectedMarkerPopup}
+                {/* selectedMarkerPopup убран — MarkerPopup рендерится только через Leaflet popupopen handler */}
                 {eventPopup}
                 {mapMessage && <MapMessage>{mapMessage}</MapMessage>}
 
