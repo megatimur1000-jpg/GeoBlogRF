@@ -964,14 +964,6 @@ const Map: React.FC<MapProps> = ({
                 });
 
                 let leafletMarker = mapFacade().createMarker([lat, lng], { icon: customIcon });
-                // Прямой fallback через Leaflet если фасад не смог создать маркер
-                if (!leafletMarker && L && mapRef.current) {
-                    try {
-                        leafletMarker = L.marker([lat, lng], { icon: customIcon }).addTo(mapRef.current);
-                    } catch (directErr) {
-                        console.debug('[Map] Direct L.marker fallback failed:', directErr);
-                    }
-                }
                 if (!leafletMarker) {
                     console.warn('[Map] createMarker returned null for marker', markerData?.id);
                     return;
@@ -1154,9 +1146,6 @@ const Map: React.FC<MapProps> = ({
                     });
 
                     let eventMarker = mapFacade().createMarker([lat, lng], { icon: eventIcon });
-                    if (!eventMarker && L && mapRef.current) {
-                        try { eventMarker = L.marker([lat, lng], { icon: eventIcon }).addTo(mapRef.current); } catch (_) {}
-                    }
                     if (!eventMarker) return;
                     (eventMarker as any).eventData = event;
 
@@ -1183,51 +1172,18 @@ const Map: React.FC<MapProps> = ({
             });
         }
 
-        // Cluster styles
-        const style = document.createElement('style');
-        style.innerHTML = `
-      .marker-cluster-custom { background: ${themeColor} !important; color: #fff !important; border: 2px solid #fff; border-radius: 50% !important; width: 40px !important; height: 40px !important; display: flex !important; align-items: center; justify-content: center; }
-      .marker-cluster-custom span { color: #fff !important; font-size: 1.2em; }
-      .leaflet-popup-content-wrapper, .leaflet-popup-content, .leaflet-popup-tip { border-radius: 8px !important; overflow: hidden !important; }
-      .event-marker-base { transition: transform 0.2s ease; }
-      .event-marker-selected .event-marker-base { transform: scale(1.1); }
-      @keyframes eventMarkerPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-    `;
-        document.head.appendChild(style);
+        // Динамический цвет кластера (зависит от themeColor из настроек)
+        const clusterColorStyle = document.createElement('style');
+        clusterColorStyle.setAttribute('data-cluster-theme', 'true');
+        clusterColorStyle.innerHTML = `.marker-cluster-custom { background: ${themeColor} !important; }`;
+        document.head.appendChild(clusterColorStyle);
 
-        let hasTileLayer = false;
-        mapRef.current.eachLayer((layer: any) => {
-            // rely on characteristic property instead of instanceof
-            if ((layer as any)?._url) hasTileLayer = true;
-        });
-
-        if (!hasTileLayer) {
-            setTimeout(() => {
-                if (mapRef.current && !markerClusterGroupRef.current) {
-                    safeAddTo(markerClusterGroup);
-                    markerClusterGroupRef.current = markerClusterGroup;
-                }
-            }, 100);
-        } else {
-            if (mapRef.current) {
-              safeAddTo(markerClusterGroup);
-              // map not ready — try to add marker cluster shortly after
-              setTimeout(() => {
-                if (mapRef.current && !markerClusterGroupRef.current) {
-                  try { safeAddTo(markerClusterGroup); markerClusterGroupRef.current = markerClusterGroup; } catch (e) { }
-                }
-              }, 200);
-            }
-        }
-
-        const highPriorityStyle = document.createElement('style');
-        highPriorityStyle.setAttribute('data-high-priority', 'true');
-        highPriorityStyle.innerHTML = `.leaflet-popup-content-wrapper, .leaflet-popup-content, .leaflet-popup-tip { border-radius: 8px !important; overflow: hidden !important; }`;
-        document.head.appendChild(highPriorityStyle);
+        // Добавляем кластерную группу на карту
+        safeAddTo(markerClusterGroup);
+        markerClusterGroupRef.current = markerClusterGroup;
 
         return () => {
-            if (style && document.head.contains(style)) document.head.removeChild(style);
-            if (highPriorityStyle && document.head.contains(highPriorityStyle)) document.head.removeChild(highPriorityStyle);
+            if (clusterColorStyle && document.head.contains(clusterColorStyle)) document.head.removeChild(clusterColorStyle);
         };
     }, [markersData, isDarkMode, filters, searchRadiusCenter, mapSettings, openEvents, selectedEvent, leftContent, rightContent, isMapReady]);
 
@@ -1347,9 +1303,6 @@ const Map: React.FC<MapProps> = ({
                         iconAnchor: [20, 40]
                     });
                     let routeMarker = mapFacade().createMarker([lat, lng], { icon: routeIcon });
-                    if (!routeMarker && L && mapRef.current) {
-                        try { routeMarker = L.marker([lat, lng], { icon: routeIcon }).addTo(mapRef.current); } catch (_) {}
-                    }
                     if (routeMarker) (routeMarker as any).isRouteLayer = true;
                 }
             });

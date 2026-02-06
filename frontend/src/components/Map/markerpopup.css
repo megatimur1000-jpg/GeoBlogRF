@@ -170,4 +170,36 @@
   border: 2px solid var(--state-favorite) !important; /* Было #ff9800 */
   box-shadow: 0 0 12px 2px var(--state-favorite), 0 0 20px 4px rgba(255, 152, 0, 0.3) !important;
   animation: favoriteGlowing 2s ease-in-out infinite alternate !important;
-} 
+}
+
+/* === КЛАСТЕРЫ МАРКЕРОВ === */
+.marker-cluster-custom {
+  color: #fff !important;
+  border: 2px solid #fff;
+  border-radius: 50% !important;
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.marker-cluster-custom span {
+  color: #fff !important;
+  font-size: 1.2em;
+}
+
+/* === МАРКЕРЫ СОБЫТИЙ === */
+.event-marker-base {
+  transition: transform 0.2s ease;
+}
+
+.event-marker-selected .event-marker-base {
+  transform: scale(1.1);
+}
+
+@keyframes eventMarkerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
