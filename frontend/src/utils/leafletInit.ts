@@ -30,4 +30,10 @@ if (Leaflet && Leaflet.Icon && Leaflet.Icon.Default) {
     });
 }
 
+// Подключаем плагин MarkerCluster — он расширяет L объектом L.markerClusterGroup
+// Импорт должен быть ПОСЛЕ установки window.L, т.к. плагин читает L из window
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+
 console.debug('[leafletInit] Leaflet initialized globally');

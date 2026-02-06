@@ -930,6 +930,12 @@ const Map: React.FC<MapProps> = ({
             }
         });
 
+        // markerClusterGroup может быть null если плагин markercluster не загружен
+        if (!markerClusterGroup) {
+            console.warn('[Map] createMarkerClusterGroup returned null — markercluster plugin not loaded');
+            return;
+        }
+
         markersData.forEach((markerData) => {
             const lat = parseFloat(markerData.latitude as any);
             const lng = parseFloat(markerData.longitude as any);
@@ -1101,7 +1107,7 @@ const Map: React.FC<MapProps> = ({
                     leafletMarker.bindTooltip(markerData.title, { direction: 'top', offset: [0, -10] });
                 }
 
-                markerClusterGroup.addLayer(leafletMarker);
+                if (markerClusterGroup) markerClusterGroup.addLayer(leafletMarker);
             }
         });
 
@@ -1172,7 +1178,7 @@ const Map: React.FC<MapProps> = ({
                         setSelectedEvent(event);
                     });
 
-                    markerClusterGroup.addLayer(eventMarker);
+                    if (markerClusterGroup) markerClusterGroup.addLayer(eventMarker);
                 }
             });
         }
