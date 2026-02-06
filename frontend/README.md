@@ -857,7 +857,7 @@ VITE_YANDEX_MAPS_API_KEY=your_yandex_maps_key
 - [ ] **Цели недели** - система задач и прогресса
 
 ### 📋 Планируется
-- [ ] **Мобильное приложение** React Native
+- [x] **Мобильная адаптация** (responsive web) — реализовано через отдельные страницы и компоненты в src/pages/Mobile. Отдельного приложения на React Native не планируется.
 - [ ] **Интеграция с социальными сетями**
 - [ ] **Система рекомендаций** AI
 - [ ] **Мультиязычность**
@@ -1036,7 +1036,9 @@ mapFacade.renderMarkers([
 ## 📄 Лицензия
 
 MIT License - см. файл [LICENSE](LICENSE)
-   import { useEffect, useState } from 'react';
+<<<<<<< HEAD
+```tsx
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import apiClient from '../../api/apiClient';
 
@@ -1097,7 +1099,12 @@ export default function AdminSubscriptionsPage() {
   );
 }
       { path: '/admin/subscriptions', element: <AdminSubscriptionsPage /> },
-   model UserSubscription {
+
+
+Пример модели на бэкенде (Prisma) — при необходимости создайте миграцию на стороне серверa:
+
+```prisma
+model UserSubscription {
   id                 Int      @id @default(autoincrement())
   userId             Int
   user               User     @relation(fields: [userId], references: [id])
@@ -1108,12 +1115,16 @@ export default function AdminSubscriptionsPage() {
   currentPeriodEnd   DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+}
+```
 
   @@index([userId])
   @@index([stripeId])
   @@index([yooKassaId])
 }> npx prisma migrate dev --name add_subscription
 > 
+=======
+>>>>>>> e34fc4e (fix(map): prevent overlays from blocking map interactions (pointer-events, portal handling, loading/error overlays))
 ## 📞 Контакты
 
 - **Автор:** Максим Иванов (Simakis)

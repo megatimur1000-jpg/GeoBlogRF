@@ -1,123 +1,43 @@
 /* Модульная система стилей для всех страниц */
 
-/* ===== CORE LAYOUT (минимальные, предсказуемые правила) ===== */
-:root {
-  /* layout tokens (override in _base.css if needed) */
-  --page-padding: 24px;
-  --topbar-height: var(--header-height, 70px);
-  --sidebar-width: var(--sidebar-width, 4rem);
-  --z-topbar: 1200;
-  --z-sidebar: 1150;
-  --z-map: 100;
-  --z-overlay: 1100;
-}
+/* ===== БАЗОВЫЕ КОНТЕЙНЕРЫ ===== */
 
-/* Основной контейнер страницы — минимальный, предсказуемый */
+/* Основной контейнер страницы */
 .page-layout-container {
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.page-container {
-  width: 100%;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: var(--page-padding);
-  box-sizing: border-box;
-}
-
-.page-main-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* allow internal scrolling */
-}
-
-.page-content-wrapper {
-  width: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.page-main-panel {
-  width: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  box-sizing: border-box;
-}
-
-/* Кнопки управления */
-.page-side-button { z-index: var(--z-overlay); }
-.page-side-buttons { z-index: calc(var(--z-overlay) + 10); }
-
-/* NOTE: Specific mode styles are in _modes.css. Keep this file for generic layout only. */
-/* Для planner-mode - переопределяем все ограничения для полного экрана */
-.page-layout-container.planner-mode {
   height: 100vh;
   padding: 0;
   margin: 0;
-  background: transparent;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  min-height: 100vh;
+  /* Светло-светло-серый фон */
+  background: #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  overflow: visible !important;
 }
 
-/* Blog page: narrow edge blur strips (2cm) at left and right, full height, pointer-events none (kept minimal) */
-.page-container.blog-page::before,
-.page-container.blog-page::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  width: 2cm;
-  pointer-events: none; /* allow clicks through */
-  z-index: calc(var(--z-overlay) - 10);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  background: rgba(255,255,255,0.55);
-}
-
-.page-container.blog-page::before { left: 0; }
-.page-container.blog-page::after { right: 0; }
-
-/* Make the map non-interactive while posts panel is active, but keep the panel interactive */
-.page-container.blog-page .facade-map-root {
-  pointer-events: none; /* map visible but non-interactive */
-}
-
-.page-container.blog-page .page-main-panel {
-  pointer-events: auto; /* allow interactions with posts panel */
-}
-
-@media (max-width: 768px) {
-  /* On small screens make the strips smaller so they don't consume too much space */
-  .page-container.blog-page::before,
-  .page-container.blog-page::after { width: 1rem; }
+/* Для planner-mode - переопределяем все ограничения для полного экрана */
+.page-layout-container.planner-mode {
+  height: 100vh !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  min-height: 100vh !important;
 }
 
 /* Для map-mode - переопределяем все ограничения для полного экрана */
 .page-layout-container.map-mode {
-  height: 100vh;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  min-height: 100vh;
+  height: 100vh !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  min-height: 100vh !important;
 }
 
 /* ===== ДВУХОКОННЫЙ РЕЖИМ: СМЕЩЕНИЕ ЦЕНТРА КАРТЫ ===== */
@@ -152,7 +72,7 @@
 .page-main-area {
   flex: 1;
   position: relative;
-  overflow: visible;
+  overflow: visible !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,7 +88,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: visible !important;
 }
 
 /* Главная панель */
@@ -179,15 +99,9 @@
   backdrop-filter: blur(10px);
   border-radius: 20px;
   box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.10);
-  overflow: hidden;
+  overflow: hidden !important;
   border: 1px solid rgba(255, 255, 255, 0.3);
   flex: 1;
-}
-
-/* For blog page we prefer narrow edge blur strips instead of full panel blur so inspector clicks work */
-.page-container.blog-page .page-main-panel {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* ===== КНОПКИ УПРАВЛЕНИЯ ===== */
@@ -390,7 +304,7 @@
   justify-content: center;
   align-items: center;
   /* Белый фон блока */
-  background: rgba(255, 255, 255, 0.98);
+  background: rgba(255, 255, 255, 0.98) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -473,18 +387,18 @@
   width: 400px;
 
   /* Fallback для старых браузеров */
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
 
   /* Стеклянный эффект - точно как в MapActionButtons */
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(10px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
 
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
 
   /* Градиент для читаемости - ПРОЗРАЧНЫЙ */
   background: linear-gradient(135deg,
       rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.05) 100%);
+      rgba(255, 255, 255, 0.05) 100%) !important;
 }
 
 .calendar-panel .glass-panel-content {
@@ -499,7 +413,7 @@
 }
 
 .calendar-panel-content {
-  color: #000000;
+  color: #000000 !important;
   /* Строго чёрный текст */
   font-size: 16px;
   /* Крупный текст */
@@ -510,20 +424,20 @@
 /* Заменяем все белые фоны на матовое стекло */
 .calendar-panel .bg-white,
 .calendar-panel [class*="bg-white"] {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px) saturate(180%);
   -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
 }
 
 /* Стили для bg-[#f4f4f4] элементов в calendar-panel */
 .calendar-panel [style*="background"] {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.15) !important;
   backdrop-filter: blur(10px) saturate(180%);
   -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 8px !important;
 }
 
 /* Стили для аккордеонов - матовое стекло */
@@ -541,52 +455,52 @@
 }
 
 /* Ensure interactive map container fills viewport and sits behind topbar/sidebar */
-/* ИСПРАВЛЕНО: убрали z-index: 0, чтобы MapContainer мог управлять своим z-index */
+/* ИСПРАВЛЕНО: убрали z-index: 0 !important, чтобы MapContainer мог управлять своим z-index */
 .map-container,
 .leaflet-container,
 #map,
 .map-root {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
   /* z-index управляется через Map.styles.ts (MapContainer имеет z-index: 1) */
 }
 
 /* КРИТИЧНО: Явно задаём z-index для Leaflet panes, чтобы маркеры были видны */
 /* Leaflet использует систему панелей (panes) для разных типов объектов */
 .leaflet-map-pane {
-  z-index: 1;
+  z-index: 1 !important;
   /* Основная панель карты */
 }
 
 .leaflet-tile-pane {
-  z-index: 200;
+  z-index: 200 !important;
   /* Тайлы карты (фон) */
 }
 
 .leaflet-overlay-pane {
-  z-index: 400;
+  z-index: 400 !important;
   /* Полигоны, полилинии */
 }
 
 .leaflet-shadow-pane {
-  z-index: 500;
+  z-index: 500 !important;
   /* Тени маркеров */
 }
 
 .leaflet-marker-pane {
-  z-index: 600;
+  z-index: 600 !important;
   /* МАРКЕРЫ - должны быть выше всех элементов карты */
 }
 
 .leaflet-tooltip-pane {
-  z-index: 650;
+  z-index: 650 !important;
   /* Подсказки */
 }
 
 .leaflet-popup-pane {
-  z-index: 700;
+  z-index: 700 !important;
   /* Попапы - самые верхние */
 }
 
@@ -608,17 +522,17 @@
 
 /* Ensure right activity feed wrapper is transparent so backdrop-filter works */
 .activity-feed {
-  background: transparent;
+  background: transparent !important;
   /* Скрываем скролл на activity-feed контейнере */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overflow: visible;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow: visible !important;
 }
 
 .activity-feed::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* If you want interactive map area on left only, add overlay that enables pointer-events there */
@@ -635,31 +549,31 @@
 }
 
 .calendar-panel button[class*="px-4"] {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px) saturate(180%);
   -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #000000;
-  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #000000 !important;
+  font-size: 16px !important;
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease !important;
 }
 
 .calendar-panel button[class*="px-4"]:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
 }
 
 /* Стили для контента аккордеонов */
 .calendar-panel [class*="border-t"] {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px) saturate(180%);
   -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
-  border-radius: 0 0 12px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  border-radius: 0 0 12px 12px !important;
 }
 
 /* Стили для всех текстов - строго чёрный и крупный */
@@ -670,8 +584,8 @@
 .calendar-panel input,
 .calendar-panel textarea,
 .calendar-panel select {
-  color: #000000;
-  font-size: 16px;
+  color: #000000 !important;
+  font-size: 16px !important;
 }
 
 .calendar-panel label {
@@ -681,47 +595,47 @@
 .calendar-panel input,
 .calendar-panel textarea,
 .calendar-panel select {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px) saturate(180%);
   -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #000000;
-  font-size: 16px;
-  border-radius: 8px;
-  padding: 10px 12px;
-  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #000000 !important;
+  font-size: 16px !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+  transition: all 0.3s ease !important;
 }
 
 .calendar-panel input:focus,
 .calendar-panel textarea:focus,
 .calendar-panel select:focus {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1) !important;
 }
 
 .calendar-panel input::placeholder,
 .calendar-panel textarea::placeholder {
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Стили для SmartEventSearch внутри GlassPanel */
 .calendar-panel .glass-panel-content>div[class*="Wrapper"] {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  border-radius: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
   height: 100%;
   display: flex;
   flex-direction: column;
   padding: 0;
-  color: #000000;
-  font-size: 16px;
+  color: #000000 !important;
+  font-size: 16px !important;
 }
 
 .calendar-panel .glass-panel-content>div[class*="Wrapper"]>div[class*="Header"] {
-  display: none;
+  display: none !important;
   /* Скрываем заголовок SmartEventSearch, так как используем GlassHeader */
 }
 
@@ -733,8 +647,8 @@
   -webkit-backdrop-filter: blur(10px) saturate(180%);
   border-radius: 12px;
   padding: 12px 24px;
-  color: #000000;
-  font-size: 16px;
+  color: #000000 !important;
+  font-size: 16px !important;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -754,13 +668,13 @@
 }
 
 .calendar-legend-panel .glass-panel-content {
-  color: #000000;
-  font-size: 16px;
+  color: #000000 !important;
+  font-size: 16px !important;
 }
 
 .calendar-legend-panel h3 {
-  color: #000000;
-  font-size: 18px;
+  color: #000000 !important;
+  font-size: 18px !important;
   font-weight: 700;
 }
 
@@ -826,53 +740,53 @@
 
 /* Кнопки аккордеона в форме создания события - точно как GlassButton */
 .calendar-accordion-button {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border-radius: 12px;
-  color: rgba(0, 0, 0, 0.8);
-  font-size: 16px;
-  font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  margin-bottom: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
+  border-radius: 12px !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin-bottom: 4px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 .calendar-accordion-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: scale(1.02);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
 }
 
 .calendar-panel button[class*="px-4"] {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px) saturate(180%);
   -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #000000;
-  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #000000 !important;
+  font-size: 16px !important;
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease !important;
 }
 
 .calendar-panel button[class*="px-4"]:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
 }
 
 .calendar-legend-panel span {
-  color: #000000;
-  font-size: 16px;
+  color: #000000 !important;
+  font-size: 16px !important;
 }
 
 /* Футер с кнопками - матовое стекло */
 .calendar-panel [class*="bg-\\[\\#dadada\\]"] {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.5) !important;
   backdrop-filter: blur(10px) saturate(180%);
   -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 .calendar-panel-header {
@@ -985,7 +899,7 @@
 
 /* Показываем заголовки панелей */
 .page-slide-panel-header {
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: space-between;
   padding: 1rem;
@@ -1044,8 +958,6 @@
   margin: 0;
   top: 0;
   left: 0;
-  /* Карта рендерится в portal на body — этот контейнер прозрачный для кликов */
-  pointer-events: none;
 }
 
 .page-container.map-mode .page-main-area {
@@ -1070,8 +982,22 @@
   pointer-events: none;
 }
 
-/* Интерактивные элементы внутри map-mode должны получать события */
-.page-container.map-mode .page-main-panel>* {
+/* ИСПРАВЛЕНО: Опускаем все UI элементы ниже карты */
+.page-container.map-mode .map-action-buttons-container,
+.page-container.map-mode .map-action-buttons-container * {
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.page-container.map-mode .glass-panel,
+.page-container.map-mode .glass-panel * {
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.page-container.map-mode .page-side-buttons,
+.page-container.map-mode .page-side-buttons * {
+  z-index: 3;
   pointer-events: auto;
 }
 
@@ -1097,41 +1023,52 @@
 
 /* Для планировщика - полный экран без ограничений */
 .page-container.planner-mode {
-  padding: 0;
-  margin: 0;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  min-height: 100vh;
-  background: transparent;
-  position: absolute;
+  padding: 0 !important;
+  margin: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  background: transparent !important;
+  position: absolute !important;
 }
 
 .page-container.planner-mode .page-main-panel {
-  border-radius: 0;
-  background: transparent;
-  backdrop-filter: none;
-  box-shadow: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  position: relative;
+  border-radius: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
   /* Пропускаем клики к карте планировщика */
   pointer-events: none;
 }
 
-/* Интерактивные элементы внутри planner-mode должны получать события */
-.page-container.planner-mode .page-main-panel>* {
+/* ИСПРАВЛЕНО: Селективные правила для planner-mode */
+.page-container.planner-mode .calendar-action-buttons-container,
+.page-container.planner-mode .calendar-action-buttons-container * {
+  pointer-events: auto;
+}
+
+.page-container.planner-mode .glass-panel,
+.page-container.planner-mode .glass-panel * {
+  pointer-events: auto;
+}
+
+.page-container.planner-mode .page-side-buttons,
+.page-container.planner-mode .page-side-buttons * {
   pointer-events: auto;
 }
 
 /* ===== СПЕЦИАЛЬНЫЙ РЕЖИМ ДЛЯ BLOGPAGE ===== */
 .blog-page .page-slide-panel.left {
-  width: 80%;
-  max-width: none;
+  width: 80% !important;
+  max-width: none !important;
 }
 
 /* ===== АДАПТИВНОСТЬ ===== */
@@ -1250,138 +1187,258 @@
 /* ===== СТИЛИ ДЛЯ POSTS-MODE ===== */
 
 /* Основной контейнер posts-mode */
+/* ===== POSTS MODE - УПРОЩЁННАЯ СТРУКТУРА БЕЗ ЛИШНИХ ОБЁРТОК ===== */
+
+/* Основной контейнер posts-mode - абсолютно независимое позиционирование */
 .page-container.posts-mode {
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  height: 100%;
-  width: 100%;
-  position: relative;
-  overflow: visible;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* FIXED позиционирование - игнорируем все родительские контейнеры */
+  position: fixed !important;
+  top: calc(64px + 1cm) !important;  /* под topbar + отступ */
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: calc(100vw - 56px - 2cm) !important;  /* вся ширина экрана - sidebar - отступы */
+  max-width: 1000px !important;
+  height: calc(100vh - 64px - 1cm) !important;
+  
+  /* GLASSMORPHISM эффект */
+  background: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  
+  /* Flexbox для заголовка и контента */
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  z-index: 1145 !important;  /* выше карты, ниже сайдбара */
 }
 
-.page-container.posts-mode .page-main-area {
-  /* Контейнер с отступами от краёв экрана */
-  position: absolute;
-  top: 1cm;
-  /* 1cm от верха (под topbar) */
-  bottom: 20px;
-  /* 20px (~5mm) от низа экрана - ПОПРОБУЙТЕ ИЗМЕНИТЬ */
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 80px);
-  /* отступы от sidebar */
-  max-width: 1000px;
-  /* Гарантируем что контейнер не растянется до низа */
-  max-height: calc(100% - 1cm - 20px);
-
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  overflow: visible;
+/* Двухоконный режим - panel справа от карты */
+.has-left-panel .page-container.posts-mode,
+.activity-feed.has-left-panel .page-container.posts-mode {
+  /* FIXED позиционирование - от центра до правого края */
+  position: fixed !important;
+  left: 50% !important;
+  right: 0 !important;  /* БЕЗ отступа - карта под панелью на весь экран */
+  top: calc(64px + 1cm) !important;
+  bottom: 0 !important;
+  width: 50vw !important;  /* ровно половина экрана */
+  height: calc(100vh - 64px - 1cm) !important;
+  transform: none !important;
+  max-width: none !important;
+  
+  /* Более тёмный glass для двухоконного режима */
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(10px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.25) !important;
 }
 
-.page-container.posts-mode .page-content-wrapper {
-  height: 100%;
-  width: 100%;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  overflow: visible;
+
+.posts-static-header {
+  position: relative !important;
+  flex-shrink: 0 !important;
+
+  /* Отступы */
+  padding: 16px 20px 12px 20px !important;
+  margin: 0 !important;
+
+  /* Нижняя граница */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+
+  /* Фон для отделения от скролла */
+  background: transparent !important;
+
+  /* Z-index чтобы был над скроллом */
+  z-index: 10 !important;
 }
 
-/* Posts/blog styles migrated to `./_content.css` */
-/* See `frontend/src/styles/_content.css` for authoritative content styles */
+/* ===== СКРОЛЛЬНАЯ ОБЛАСТЬ (ТОЛЬКО ПОСТЫ) ===== */
 
-/* Также скрываем скролл на page-main-panel */
-.page-container.posts-mode .page-main-panel>div,
-.page-container.posts-mode .p-6 {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.posts-scroll-area {
+  /* Занимает оставшееся пространство */
+  flex: 1 !important;
+  position: relative !important;
+
+  /* Скрытая прокрутка - можно скроллить колёсиком, но полоса не видна */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  /* Отступы от краёв glassmorphism контейнера */
+  /* ВАЖНО: padding-bottom 30px (~8mm) чтобы контент не доходил до нижнего края стекла */
+  padding: 12px 16px 30px 16px !important;
+
+  /* Скрываем полосу прокрутки */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-.page-container.posts-mode .page-main-panel>div::-webkit-scrollbar,
-.page-container.posts-mode .p-6::-webkit-scrollbar {
-  display: none;
-  width: 0;
+.posts-scroll-area::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
-/* Posts mode styles have been migrated to `frontend/src/styles/_content.css`.
-   Keep `_content.css` as the canonical source for posts/blog related layout and scroll behavior.
-   Removed legacy duplicates from this file to avoid conflicts. */
+/* Центрируем контент постов внутри скролла */
+.posts-scroll-area .posts-content-centered {
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  /* Отступ снизу чтобы контент не доходил до края стекла на 20px (~5mm) */
+  padding-bottom: 20px !important;
+}
 
-/* Back-compat helper (minimal) */
-.posts-inner-container { display: none; }
+/* ===== СТИЛИ ДЛЯ ЭЛЕМЕНТОВ ПОСТОВ ===== */
+/* Чистый белый фон без синеватого оттенка */
+.post-item,
+.posts-scroll-area .space-y-4>div {
+  margin-bottom: 16px !important;
+  padding: 16px !important;
+  border-radius: 12px !important;
+  /* Чистый белый фон без blur эффекта */
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s ease !important;
+}
+
+.post-item:hover,
+.posts-scroll-area .space-y-4>div:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===== УЛУЧШЕННАЯ КОНТРАСТНОСТЬ ТЕКСТА ===== */
+/* Заголовки постов */
+.posts-scroll-area h2,
+.posts-scroll-area h3,
+.posts-scroll-area .text-xl,
+.posts-scroll-area .text-lg,
+.posts-scroll-area .font-bold,
+.posts-scroll-area .font-semibold {
+  color: #1a1a2e !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+/* Основной текст постов */
+.posts-scroll-area p,
+.posts-scroll-area .text-gray-600,
+.posts-scroll-area .text-gray-700,
+.posts-scroll-area .text-sm {
+  color: #2d2d44 !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Мета-информация (дата, автор) */
+.posts-scroll-area .text-gray-500,
+.posts-scroll-area .text-xs {
+  color: #4a4a6a !important;
+}
+
+/* Статичный заголовок - улучшенная контрастность */
+.posts-static-header h1 {
+  color: #1a1a2e !important;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6);
+}
+
+.posts-static-header button,
+.posts-static-header .btn {
+  text-shadow: none !important;
+}
+
+
+/* Также скрываем скролл на уровне контейнера */
+.page-container.posts-mode {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.page-container.posts-mode::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+
 /* ===== СТИЛИ ДЛЯ ACTIVITY-MODE - GLASSMORPHISM КОНТЕЙНЕР ===== */
 
 /* Основной контейнер activity - аналогично posts-mode */
 .page-layout-container.activity-map-background {
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  height: 100% !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
 .page-layout-container.activity-map-background .page-main-panel {
-  position: absolute;
+  position: absolute !important;
   /* Позиционирование как у posts */
-  top: calc(64px + 1cm);
-  bottom: 5mm;
-  left: 10mm;
-  right: 10mm;
-  width: auto;
-  height: auto;
+  top: calc(64px + 1cm) !important;
+  bottom: 5mm !important;
+  left: 10mm !important;
+  right: 10mm !important;
+  width: auto !important;
+  height: auto !important;
 
   /* Glassmorphism эффект */
-  background: rgba(255, 255, 255, 0.18);
-  /* Temporarily disable heavy blur to avoid page-wide effect */
-  -webkit-backdrop-filter: none;   /* disabled temporarily */
-  backdrop-filter: none;           /* disabled temporarily */
+  background: rgba(255, 255, 255, 0.18) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
 
   /* Скруглённые углы */
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.15),
     0 2px 8px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
 
-  overflow: hidden;
+  overflow: hidden !important;
 }
 
-/* Двухоконный режим для activity */
+/* Двухоконный режим для activity — показываем правую панель справа, слева остаётся карта */
 .has-left-panel .page-layout-container.activity-map-background .page-main-panel {
   /* Позиционирование задаётся родительским контейнером в MainLayout */
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  position: absolute !important;
+  left: 50% !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 50% !important;
 }
 
 /* Внутренний контейнер для activity */
 .activity-inner-container {
-  position: absolute;
-  top: 4mm;
-  bottom: 5mm;
-  left: 4mm;
-  right: 4mm;
+  position: absolute !important;
+  top: 4mm !important;
+  bottom: 5mm !important;
+  left: 4mm !important;
+  right: 4mm !important;
 
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .activity-inner-container::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Скрываем скроллы на всех уровнях activity */
@@ -1392,8 +1449,8 @@
 .page-layout-container.activity-map-background .map-content-container,
 .page-layout-container.activity-map-background .map-area,
 .page-layout-container.activity-map-background .full-height-content {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .page-layout-container.activity-map-background::-webkit-scrollbar,
@@ -1403,17 +1460,17 @@
 .page-layout-container.activity-map-background .map-content-container::-webkit-scrollbar,
 .page-layout-container.activity-map-background .map-area::-webkit-scrollbar,
 .page-layout-container.activity-map-background .full-height-content::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Контент внутри activity - скрытый скролл */
 .page-layout-container.activity-map-background .full-height-content {
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 12px 16px;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 12px 16px !important;
 }
 
 /* Стили для кнопок постов */
@@ -1465,7 +1522,7 @@
 
 /* Дублирующий стиль удален - используется основной выше */
 
-/* Затемнение при открытых панелях — не блокирует клики (карта остаётся активной) */
+/* Затемнение при открытых панелях */
 .page-overlay {
   position: absolute;
   top: 0;
@@ -1477,11 +1534,124 @@
   visibility: hidden;
   transition: all 0.3s ease;
   z-index: 15;
-  pointer-events: none;
 }
 
 .page-overlay.active {
   opacity: 1;
   visibility: visible;
-  pointer-events: none;
+}
+
+/* ===== СТИЛИ ДЛЯ КЛАСТЕРОВ МАРКЕРОВ ===== */
+
+/* Основные стили для кластеров */
+.marker-cluster-custom {
+  background: none !important;
+  border: none !important;
+  width: 40px !important;
+  height: 40px !important;
+  position: relative !important;
+}
+
+.marker-cluster-content {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  border: 3px solid #fff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+  animation: clusterPulse 2s ease-in-out infinite !important;
+}
+
+.marker-cluster-count {
+  color: white !important;
+  font-weight: bold !important;
+  font-size: 14px !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
+}
+
+/* Анимация пульсации кластеров */
+@keyframes clusterPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Стили для разных типов кластеров по категориям - используем цвета из mapUtils.ts markerCategoryStyles */
+.marker-cluster-attraction .marker-cluster-content {
+  background: #3498db !important; /* Синий для достопримечательностей */
+}
+
+.marker-cluster-restaurant .marker-cluster-content {
+  background: #8B0000 !important; /* Бордовый для ресторанов */
+}
+
+.marker-cluster-hotel .marker-cluster-content {
+  background: #8e44ad !important; /* Фиолетовый для отелей */
+}
+
+.marker-cluster-nature .marker-cluster-content {
+  background: #27ae60 !important; /* Зелёный для природы */
+}
+
+.marker-cluster-culture .marker-cluster-content {
+  background: #f1c40f !important; /* Жёлтый для культуры */
+}
+
+.marker-cluster-entertainment .marker-cluster-content {
+  background: #f39c12 !important; /* Оранжевый для развлечений */
+}
+
+.marker-cluster-transport .marker-cluster-content {
+  background: #16a085 !important; /* Бирюзовый для транспорта */
+}
+
+.marker-cluster-shopping .marker-cluster-content {
+  background: #e67e22 !important; /* Оранжевый для торговли */
+}
+
+.marker-cluster-healthcare .marker-cluster-content {
+  background: #e74c3c !important; /* Красный для здравоохранения */
+}
+
+.marker-cluster-education .marker-cluster-content {
+  background: #3498db !important; /* Синий для образования */
+}
+
+.marker-cluster-service .marker-cluster-content {
+  background: #34495e !important; /* Тёмно-серый для сервиса */
+}
+
+.marker-cluster-event .marker-cluster-content {
+  background: #9b59b6 !important; /* Фиолетовый для событий */
+}
+
+.marker-cluster-blog .marker-cluster-content {
+  background: #2ecc71 !important; /* Зелёный для блогов */
+}
+
+.marker-cluster-route .marker-cluster-content {
+  background: #f39c12 !important; /* Оранжевый для маршрутов */
+}
+
+.marker-cluster-chat .marker-cluster-content {
+  background: #1abc9c !important; /* Бирюзовый для чатов */
+}
+
+.marker-cluster-user_poi .marker-cluster-content {
+  background: #e67e22 !important; /* Оранжевый для пользовательских POI */
+}
+
+.marker-cluster-default .marker-cluster-content {
+  background: #7f8c8d !important; /* Серый для по умолчанию */
+}
+
+.marker-cluster-other .marker-cluster-content {
+  background: #7f8c8d !important; /* Серый для других */
+}
+
+/* Смешанные кластеры (разные категории) */
+.marker-cluster-mixed .marker-cluster-content {
+  background: #667eea !important; /* Фиолетово-синий градиент */
+  border: 3px dashed #fff !important;
 }

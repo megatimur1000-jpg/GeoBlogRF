@@ -1,4 +1,5 @@
 import { projectManager } from '../../services/projectManager';
+import { mapFacade } from '../../services/map_facade/index';
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { MapPin } from 'lucide-react';
@@ -58,6 +59,7 @@ const SimplifiedMap: React.FC<SimplifiedMapProps> = ({
   markerId, 
   className 
 }) => {
+  // NOTE: mapRef is only the DOM container for ephemeral maps. Use `mapFacade()` for map API interactions.
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
@@ -213,18 +215,15 @@ const SimplifiedMap: React.FC<SimplifiedMapProps> = ({
           />
         );
 
-        // Add marker via facade, include popupContainer for Leaflet adapter
-        const mapApi = projectManager.getMapApi();
-        mapApi.addMarker({
-          id: selectedMarker.id,
-          lat: selectedMarker.latitude,
-          lon: selectedMarker.longitude,
-          title: selectedMarker.title,
-          popupContainer: popupContent
-        } as any);
+        // Add marker via facade using createMarker and bind popup (avoids direct map API usage)
+        try {
+          const icon = mapFacade().createDivIcon({ className: 'simplified-marker-icon', html: '<div class="simplified-marker" />', iconSize: [34, 44], iconAnchor: [17, 44] });
+          const marker = mapFacade().createMarker([selectedMarker.latitude, selectedMarker.longitude], { icon });
+          try { marker.bindPopup?.(popupContent); } catch (e) { }
+        } catch (e) { }
 
-        // Center the view
-        try { projectManager.getMapApi().setCenter([selectedMarker.latitude, selectedMarker.longitude], 15); } catch {}
+        // Center the view via facade
+        try { mapFacade().setView([selectedMarker.latitude, selectedMarker.longitude], 15); } catch {}
 
         setIsLoading(false);
       } catch (err) {
@@ -238,7 +237,7 @@ const SimplifiedMap: React.FC<SimplifiedMapProps> = ({
     return () => {
       clearTimeout(timer);
       // clear map instance via facade (forceful destroy for this ephemeral map)
-      try { projectManager.getMapApi().clear({ force: true }); } catch {}
+      try { mapFacade().clear({ force: true }); } catch {}
       markersRef.current = [];
     };
   }, [selectedMarker, markerId, allMarkers]);

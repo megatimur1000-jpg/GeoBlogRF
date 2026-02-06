@@ -13,23 +13,23 @@ test('Sidebar opens planner and navigates to /planner', async () => {
 
   const { getByText, getByRole } = render(
     <MemoryRouter initialEntries={["/"]}>
-      <LayoutProvider>
-        <GuestProvider>
+      <GuestProvider>
+        <LayoutProvider>
           <Sidebar />
-        </GuestProvider>
-        <Routes>
-          <Route path="/planner" element={<div data-testid="planner-page">PLANNER</div>} />
-          <Route path="/" element={<div data-testid="home">HOME</div>} />
-        </Routes>
-      </LayoutProvider>
+          <Routes>
+            <Route path="/planner" element={<div data-testid="planner-page">PLANNER</div>} />
+            <Route path="/" element={<div data-testid="home">HOME</div>} />
+          </Routes>
+        </LayoutProvider>
+      </GuestProvider>
     </MemoryRouter>
   );
 
-  // Кликаем по самому навигационному элементу (nav) чтобы раскрыть сайдбар
+  // Кликаем по навигационному контейнеру, чтобы раскрыть сайдбар
   const sidebar = getByRole('navigation');
   fireEvent.click(sidebar);
 
-  // Теперь кликаем по кнопке Планировщик (текст появляется после раскрытия)
+  // Теперь кликаем по кнопке Планировщик (появится после раскрытия)
   const plannerBtn = getByText('Планировщик');
   fireEvent.click(plannerBtn);
 

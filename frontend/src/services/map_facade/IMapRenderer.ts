@@ -1,23 +1,17 @@
-// ========================
-// Базовые гео-типы
-// ========================
+import { DomainGeoPoint, DomainGeoBounds, PolylineStyle, IMapObjectHandle } from './types';
 
-export interface GeoPoint {
-  lat: number;
-  lon: number;
-}
+// Backwards-compatible object-based GeoPoint (existing codebase uses {lat, lon})
+export interface GeoPoint { lat: number; lon: number; }
 
-export type LatLng = [number, number]; // [lat, lng] — как в Leaflet
+// Keep LatLng alias for convenience (tuple [lat, lng])
+export type LatLng = [number, number];
 
-export type Bounds = {
-  north?: number;
-  south?: number;
-  east?: number;
-  west?: number;
-  // Альтернативный формат (например, для Leaflet)
+// Bounds remain compatible with domain bounds, with legacy aliases
+export type Bounds = DomainGeoBounds & {
   southWest?: LatLng;
   northEast?: LatLng;
 };
+
 
 // ========================
 // Контекст и конфигурация
@@ -96,6 +90,7 @@ export interface MapMarker {
   title?: string;
   category?: string;
   type?: string;
+  description?: string; // optional description allowed for markers
   // Добавь остальные поля, если они нужны, например: icon, popup и т.д.
 }
 
@@ -189,42 +184,70 @@ export interface IMapRenderer {
   destroy(): void;
 
   // Управление видом
-  setView(center: GeoPoint, zoom: number): void;
+  setView(center: GeoPoint | LatLng, zoom: number): void;
   invalidateSize?(): void;
 
-  // Рендеринг данных
+  // === Координатные и утилитарные методы ===
+  // Возвращает пиксельную точку для заданного latlng
+  project?(latlng: LatLng): { x: number; y: number };
+  // Обратная операция — возвращает [lat, lng]
+  unproject?(point: { x: number; y: number }, zoom?: number): LatLng;
+  // Возвращает размер контейнера карты в пикселях
+  getSize?(): { x: number; y: number };
+  // Текущий зум
+  getZoom?(): number;
+
+  // === Работа со слоями ===
+  eachLayer?(fn: (layer: any) => void): void;
+
+  // Рендеринг данных (вендор-агностично)
   renderMarkers(markers: UnifiedMarker[]): void;
   renderRoute(route: PersistedRoute): void;
+
+  // Высокоуровневые операции с объектами карты
+  // Use domain types (tuples) for facade-level polyline operations
+  createPolyline?(points: DomainGeoPoint[], style?: PolylineStyle): IMapObjectHandle;
+
+  // Низкоуровневое добавление/удаление слоёв
+  addLayer?(layer: any): void;
+  removeLayer?(layer: any): void;
 
   // Очистка (опционально)
   clear?(): void;
   removeMarker?(id: string): void;
   removeRoute?(id: string): void;
 
+  // Навигация и bounds — facade-level uses domain types
+  setCenter?(center: DomainGeoPoint, zoom?: number): void;
+  getCenter?(): DomainGeoPoint;
+  setBounds?(bounds: DomainGeoBounds, options?: any): void;
+
   // Доступ к инстансу (для расширенных сценариев)
   getMap?(): unknown;
 
   // --- Доп. утилиты (опциональные) для упрощения работы компонентов через фасад ---
   addTileLayer?(url: string, options?: any): any;
-  setZoomControl?(position?: string): any;
-  createDivIcon?(opts?: any): any;
-  createIcon?(opts?: any): any;
-  createMarker?(latlng: any, opts?: any): any;
-  point?(x: number, y: number): any;
-  latLng?(lat: number, lon: number): any;
-  createPolyline?(latlngs: Array<[number, number]>, opts?: any): any;
-  latLngBounds?(points: any): any;
-  createPolygon?(latlngs: Array<[number, number]>, opts?: any): any;
-  createCircle?(center: [number, number], opts?: any): any;
-  fitBounds?(bounds: any, opts?: any): void;
-  createMarkerClusterGroup?(opts?: any): any;
-  latLngToContainerPoint?(latlng: any): { x: number; y: number };
+  // Перелет/анимация к точке
+  flyTo?(center: LatLng, zoom?: number, options?: any): void;
 
+  // Универсальная подписка на события
+  on?(event: string, handler: (...args: any[]) => void): void;
+  off?(event: string, handler: (...args: any[]) => void): void;
 
+  // Специфичные опции/поведения (опционально)
+  enableBehavior?(id: string): void;
+  disableBehavior?(id: string): void;
 
-
-  // Обработка событий
-  onClick?(handler: (latLng: LatLng) => void): void;
+  // Обработка событий (deprecated shorthands kept for compatibility)
+  onMapClick?(handler: (event: any) => void): void;
   onMapMove?(handler: () => void): void;
+  offMapMove?(handler: () => void): void;
   onMapZoom?(handler: () => void): void;
+  offMapZoom?(handler: () => void): void;
+
+  // События начала перемещения/зума (movestart/zoomstart)
+  onMapMoveStart?(handler: () => void): void;
+  offMapMoveStart?(handler: () => void): void;
+  onMapZoomStart?(handler: () => void): void;
+  offMapZoomStart?(handler: () => void): void;
 }

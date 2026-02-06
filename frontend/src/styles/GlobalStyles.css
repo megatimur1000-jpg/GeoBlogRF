@@ -1,12 +1,121 @@
-/* DEPRECATED: Legacy global styles. Prefer modular imports from `styles/index.css` (/_base, _components, _layout, _modes). */
 /* Глобальные стили для всех страниц с единым дизайном как в чате */
 
-/* Layout rules have been consolidated into `PageLayout.css` and `_layout.css`.
-   Keep layout definitions there as the single source of truth to avoid duplication and conflicts.
-   If you need to adjust container/mode behavior, edit `frontend/src/styles/_layout.css` or `frontend/src/styles/PageLayout.css`.
-*/
+/* 🎨 НОВЫЙ СТИЛЬ - Прозрачный фон, картографические паттерны через MapBackground.css */
+.page-container {
+  min-height: 100vh;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
 
-/* NOTE: Page-specific / component styles remain here if not layout-related (e.g., embossed classes).*/
+/* Исключение для chat-container, planner-mode, map-mode и posts-mode - там отступы не нужны */
+.page-container:not(.chat-container):not(.planner-mode):not(.map-mode):not(.posts-mode) {
+  padding: 24px;
+}
+
+/* Специальные стили для page-container с классом chat-container */
+.page-container.chat-container {
+  padding: 32px 0 32px 0; /* Отступы 2 см сверху и снизу */
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background: #e8e8e8; /* Светло-светло-серый фон */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Альтернативный зеркальный градиент для более выраженного эффекта */
+.page-container.mirror-gradient {
+  background: #e8e8e8; /* Светло-светло-серый фон */
+}
+
+/* Вертикальный зеркальный градиент */
+.page-container.vertical-mirror {
+  background: #e8e8e8; /* Светло-светло-серый фон */
+}
+
+/* Диагональный зеркальный градиент */
+.page-container.diagonal-mirror {
+  background: #e8e8e8; /* Светло-светло-серый фон */
+}
+
+/* Градиент с плавным переходом для двухоконного режима */
+.page-container.two-panel-mode {
+  background: #e8e8e8; /* Светло-светло-серый фон */
+}
+
+/* Градиент для трехоконного режима */
+.page-container.three-panel-mode {
+  background: #e8e8e8; /* Светло-светло-серый фон */
+}
+
+
+
+/* Заголовок страницы */
+.page-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Основная область контента */
+.page-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important;
+}
+
+/* Для planner-mode - убираем все отступы */
+.page-container.planner-mode .page-main-area {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Обертка контента */
+.page-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  background: transparent !important; /* Убираем белый фон */
+  margin: 0; /* Убираем отступы */
+  padding: 0; /* Убираем отступы */
+  overflow: hidden !important;
+}
+
+/* Для planner-mode - убираем все отступы */
+.page-container.planner-mode .page-content-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
 
 /* НОВЫЙ КЛАСС: EMBOSSED ЭФФЕКТ БЕЗ ВЫДВИГАЮЩИХСЯ ПАНЕЛЕЙ */
 .embossed-container {
@@ -347,9 +456,36 @@ html, body, #root {
   border-radius: 14px !important;
 }
 
-/* POSTS MODE: (migrated to PageLayout.css) — see `frontend/src/styles/PageLayout.css` for canonical posts layout and glass rules. */
+/* 
+ * POSTS MODE: контейнер без отступа снизу для полного экрана карты
+ * Убираем отступ 60px (~15mm) снизу от экрана
+ */
+.page-layout-container.posts-mode {
+  height: calc(100vh - 64px) !important;
+  min-height: calc(100vh - 64px) !important;
+  max-height: calc(100vh - 64px) !important;
+  margin-bottom: 0 !important;
+  background: transparent !important;
+}
 
-/* posts glass styling moved to PageLayout.css (posts-mode) — keep content styles canonical there. */
+/* End overrides */
+
+/* Glass style specifically for posts panel */
+.posts-glass {
+  /* lighter glass so map gradient shows through */
+  background: rgba(255, 255, 255, 0.06) !important;
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)) !important;
+  backdrop-filter: blur(14px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
+  border-radius: 14px !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.03) !important;
+  padding: 14px !important;
+}
+
+.posts-glass .page-body {
+  background: transparent !important;
+}
 
 /* ВНУТРЕННИЕ ЭЛЕМЕНТЫ КАРТЫ - ПРОСТЫЕ СТИЛИ */
 .map-card {
@@ -785,10 +921,44 @@ html, body, #root {
 
 
 
-/* Layout: canonical rules live in `frontend/src/styles/PageLayout.css` and `frontend/src/styles/_layout.css`.
-   Remove duplicated/legacy rules from this file to avoid conflicts. */
+/* Главная панель - обеспечиваем полную высоту */
+.page-main-panel {
+  flex: 1 !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
 
-/* See `PageLayout.css` for authoritative definitions of `.page-main-panel` and `.page-layout-container` */
+/* Стили для двухоконного режима - обеспечиваем одинаковую высоту */
+.page-layout-container {
+  height: calc(100vh - 64px) !important; /* Вычитаем отступы сверху и снизу (32px + 32px) */
+  min-height: calc(100vh - 64px) !important;
+  max-height: calc(100vh - 64px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+/* Для карты - полный экран без ограничений */
+.page-layout-container.map-mode {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: contents !important;
+  overflow: visible !important;
+  background: transparent !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  inset: 0 !important;
+}
 
 /* Стили для кнопок управления картой */
 .map-control-button {
@@ -812,6 +982,8 @@ html, body, #root {
   transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
+
+
 
 /* Стили для контента карты */
 .map-content-container {
@@ -868,18 +1040,22 @@ html, body, #root {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Область карты - НА ВЕСЬ ЭКРАН */
 .map-area {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  position: fixed !important;
+  top: var(--facade-map-top, 0px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;  /* ВСЕГДА полная ширина viewport */
+  height: calc(100vh - var(--facade-map-top, 0px)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  z-index: 0 !important;
+  max-width: none !important;  /* Убираем любые ограничения */
   background: transparent !important; /* Прозрачный фон - карта просвечивает */
   min-height: 400px;
-  width: 100%;
   border-radius: 0;
 }
 
@@ -968,4 +1144,80 @@ html, body, #root {
   background-color: #f0f0f0 !important;
 } 
 
-/* MAP STYLE: moved to `PersistentMap.css` and `_modes.css` — keep facade modifiers and dev rules there for single source of truth. */
+/* ======== MAP STYLES ======== */
+
+/* Глобальные стили для карты - ВСЕГДА на весь экран */
+.facade-map-root {
+  position: fixed !important;
+  top: var(--facade-map-top, 0px);
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;  /* ВСЕГДА полная ширина viewport */
+  height: calc(100vh - var(--facade-map-top, 0px)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 0;
+  overflow: visible !important;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+  max-width: none !important;  /* Убираем любые ограничения */
+}
+
+/* КРИТИЧНО: Leaflet контейнер ВНУТРИ должен растягиваться на 100% */
+.facade-map-root .leaflet-container {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+}
+
+/* Все дочерние элементы Leaflet тоже на 100% */
+.facade-map-root .leaflet-pane,
+.facade-map-root .leaflet-map-pane {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Двухоконный режим - карта ВСЕГДА на весь экран */
+.facade-map-root.two-panel-mode {
+  width: 100vw !important;  /* Изменено с 100% на 100vw */
+  height: calc(100vh - var(--facade-map-top, 0px)) !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+.facade-map-root.two-panel-mode .leaflet-container {
+  width: 100vw !important;  /* Изменено с 100% на 100vw */
+  height: 100% !important;
+}
+
+/* Однооконный режим (полный экран) */
+.facade-map-root.single-panel-mode {
+  width: 100vw !important;
+  height: calc(100vh - var(--facade-map-top, 0px)) !important;
+}
+
+.facade-map-root.single-panel-mode .leaflet-container {
+  width: 100vw !important;
+  height: calc(100vh - var(--facade-map-top, 0px)) !important;
+}
+
+/* Режим когда карта скрыта (только Posts + Activity) */
+.facade-map-root.map-hidden {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Когда карта отображается полноэкранно - скрываем панель постов (верхний фон) */
+.map-fullscreen .page-container.posts-mode {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
